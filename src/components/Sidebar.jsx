@@ -4,7 +4,7 @@ import { useAuth } from "../store/auth.jsx";
 import {
   Coffee, Building2, Users, LayoutDashboard,
   LogOut, Search, X,
-  GitBranch, Package, BookOpen, ChevronRight, Clock,
+  GitBranch, Package, BookOpen, ChevronRight, Clock, BarChart2
 } from "lucide-react";
 
 const NAV = [
@@ -25,7 +25,7 @@ const NAV = [
       { to: "/inventory", icon: Package,   label: "Inventory",     sub: "Stock & transfers",     roles: ["super_admin","org_admin","branch_manager"] },
       { to: "/recipes",   icon: BookOpen,  label: "Recipes",       sub: "Drink ingredients",     roles: ["super_admin","org_admin","branch_manager"] },
       { to: "/shifts",    icon: Clock,     label: "Shifts",        sub: "Reports & management",  roles: ["super_admin","org_admin","branch_manager"] },
-      { to: "/analytics", icon: BarChart2, label: "Analytics", sub: "Reports & trends",
+      { to: "/reports-dashboard", icon: BarChart2, label: "Analytics", sub: "Reports & trends",
         roles: ["super_admin","org_admin","branch_manager"] },
     ],
   },

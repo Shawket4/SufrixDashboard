@@ -12,7 +12,7 @@ import Menu from "./pages/menu/Menu";
 import Inventory from "./pages/inventory/Inventory";
 import Recipes from "./pages/recipes/Recipes";
 import Shifts from "./pages/shifts/Shifts";
-import Analytics from "./pages/analytics/Analytics"
+import Analytics from "./pages/analytics/Reports"
 
 export default function App() {
   return (
@@ -35,7 +35,7 @@ export default function App() {
             <Route path="recipes" element={<Recipes/>}/>
             <Route path="shifts" element={<Shifts/>}/>
             <Route path="*"       element={<Navigate to="/" replace />} />
-            <Route path="analytics" element={<Analytics/>}/>
+            <Route path="reports-dashboard" element={<Analytics/>}/>
           </Route>
         </Routes>
       </BrowserRouter>
