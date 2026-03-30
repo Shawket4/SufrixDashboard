@@ -35,7 +35,6 @@ import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/store/auth";
 import { useAppStore } from "@/store/app";
 import { fmtRole, ROLE_COLORS, initials } from "@/utils/format";
-import type { UserRole } from "@/types";
 
 const NAV = [
   {
@@ -109,13 +108,6 @@ const NAV = [
         sub: "Reports & trends",
         roles: ["super_admin", "org_admin", "branch_manager"],
       },
-      {
-        to: "/permissions/select",
-        icon: Shield,
-        label: "Permissions",
-        sub: "Access control",
-        roles: ["super_admin", "org_admin"],
-      },
     ],
   },
 ] as const;
@@ -128,12 +120,15 @@ interface SidebarContentProps {
 function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
   const [search, setSearch] = useState("");
   const user = useAuthStore((s) => s.user);
-  const userRole = user?.role;
   const signOut = useAuthStore((s) => s.signOut);
   const language = useAppStore((s) => s.language);
   const setLang = useAppStore((s) => s.setLanguage);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+
+  console.log("collapsed:", collapsed);
+  console.log("user:", user);
+  console.log("user role:", user?.role);
 
   const handleSignOut = () => {
     signOut();
@@ -146,12 +141,11 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
     ...g,
     items: g.items.filter(
       (i) =>
-        (userRole
-          ? (i.roles as readonly UserRole[]).includes(userRole)
-          : false) &&
+        (i.roles as readonly string[]).includes(user?.role ?? "") &&
         (search === "" || i.label.toLowerCase().includes(search.toLowerCase())),
     ),
   })).filter((g) => g.items.length > 0);
+  console.log("filtered:", filtered);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -189,7 +183,7 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
           )}
         </div>
 
-        {/* Search — hidden when collapsed ──────────────────── */}
+        {/* Search — hidden when collapsed */}
         {!collapsed && (
           <div className="px-3 py-2 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-2">
@@ -201,7 +195,7 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search… ⌘K"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground min-w-0"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground min-w-0"
               />
               {search && (
                 <button
@@ -215,12 +209,12 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
           </div>
         )}
 
-        {/* Nav ──────────────────────────────────────────────── */}
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2 px-2 no-scrollbar">
           {filtered.map((group) => (
             <div key={group.group} className="mb-3">
               {!collapsed && (
-                <p className="text-[10px] font-bold text-foreground uppercase tracking-widest px-3 mb-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 mb-1">
                   {group.group}
                 </p>
               )}
@@ -239,10 +233,8 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                               ? "justify-center h-10 w-10 mx-auto"
                               : "px-3 py-2.5",
                             isActive
-                              ? // Active: accent background, vivid text
-                                "bg-accent text-accent-foreground font-semibold"
-                              : // Inactive: keep label/icon text readable in all themes
-                                "text-foreground hover:bg-muted hover:text-foreground",
+                              ? "bg-accent text-accent-foreground font-semibold"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
                           )
                         }
                       >
@@ -251,22 +243,17 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                             {isActive && !collapsed && (
                               <span className="nav-active-indicator" />
                             )}
-                            {/* Icon wrapper ───────────────────────────── */}
                             <div
                               className={cn(
                                 "flex items-center justify-center rounded-lg flex-shrink-0 transition-all",
                                 collapsed ? "w-8 h-8" : "w-7 h-7",
                                 isActive
-                                  ? // Active: brand gradient icon
-                                    "brand-gradient text-white shadow-sm"
-                                  : // Inactive: secondary bg with readable icon text
-                                    "bg-secondary text-foreground",
+                                  ? "brand-gradient text-white shadow-sm"
+                                  : "bg-muted text-muted-foreground",
                               )}
                             >
                               <Icon size={collapsed ? 15 : 14} />
                             </div>
-
-                            {/* Label + sub ─────────────────────────────── */}
                             {!collapsed && (
                               <div className="flex-1 min-w-0">
                                 <p
@@ -274,7 +261,7 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                                     "text-sm leading-tight truncate",
                                     isActive
                                       ? "font-semibold text-foreground"
-                                      : "font-medium text-foreground",
+                                      : "font-medium",
                                   )}
                                 >
                                   {label}
@@ -297,7 +284,6 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                     {collapsed && (
                       <TooltipContent side="right">
                         <p className="font-medium">{label}</p>
-                        <p className="text-xs text-muted-foreground">{sub}</p>
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -307,7 +293,7 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
           ))}
         </nav>
 
-        {/* Footer ───────────────────────────────────────────── */}
+        {/* Footer */}
         <div
           className={cn(
             "flex-shrink-0 border-t border-border",
@@ -361,7 +347,7 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                   className="w-full flex items-center justify-center"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs font-semibold">
+                    <AvatarFallback className="text-xs">
                       {initials(user?.name ?? "")}
                     </AvatarFallback>
                   </Avatar>
@@ -372,23 +358,18 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
                 <p className="text-xs text-muted-foreground">
                   {fmtRole(user?.role ?? "")}
                 </p>
-                <p className="text-xs text-destructive mt-1">
-                  Click to sign out
-                </p>
               </TooltipContent>
             </Tooltip>
           ) : (
             <>
-              <div className="flex items-center gap-3 p-2 rounded-xl bg-secondary mb-2">
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-muted mb-2">
                 <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
+                  <AvatarFallback className="text-xs">
                     {initials(user?.name ?? "")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate text-foreground">
-                    {user?.name}
-                  </p>
+                  <p className="text-sm font-semibold truncate">{user?.name}</p>
                   <p
                     className={cn(
                       "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border inline-block mt-0.5",
@@ -461,7 +442,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           onClick={toggleSidebar}
           className={cn(
             "absolute -right-3 top-20 z-10",
-            "w-6 h-6 rounded-full bg-card border border-border shadow-sm",
+            "w-6 h-6 rounded-full bg-background border border-border shadow-sm",
             "flex items-center justify-center text-muted-foreground hover:text-foreground",
             "transition-colors",
           )}
