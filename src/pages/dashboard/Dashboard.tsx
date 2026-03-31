@@ -36,6 +36,7 @@ import {
   fmtPayment,
   PAYMENT_BG,
   initials,
+  TZ,
 } from "@/utils/format";
 import type { Branch, Order, InventoryItem } from "@/types";
 
@@ -60,7 +61,13 @@ function Card({
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
 function greet(name?: string | null): string {
-  const h = new Date().getHours();
+  const h = parseInt(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date()),
+  );
   const word = h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
   return `Good ${word}, ${name?.split(" ")[0] ?? "there"} 👋`;
 }

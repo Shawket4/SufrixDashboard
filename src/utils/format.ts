@@ -1,5 +1,8 @@
 import type { PaymentMethod } from "@/types";
 
+export const TZ = "Africa/Cairo";
+const loc = (opts: Intl.DateTimeFormatOptions) => ({ ...opts, timeZone: TZ });
+
 // ── Money ─────────────────────────────────────────────────────────────────────
 export const egp = (piastres: number = 0): string => {
   const egpValue = piastres / 100;
@@ -17,39 +20,39 @@ export const egpFull = (piastres: number = 0): string => {
   })}`;
 };
 
-export const toEGP  = (p: number): string => (p / 100).toFixed(2);
+export const toEGP      = (p: number): string => (p / 100).toFixed(2);
 export const toPiastres = (v: string | number): number =>
   Math.round(parseFloat(String(v)) * 100) || 0;
 
 // ── Dates ─────────────────────────────────────────────────────────────────────
 export const fmtDate = (iso: string | null | undefined): string => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", {
+  return new Date(iso).toLocaleDateString("en-GB", loc({
     day: "2-digit", month: "short", year: "numeric",
-  });
+  }));
 };
 
 export const fmtTime = (iso: string | null | undefined): string => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("en-GB", {
+  return new Date(iso).toLocaleTimeString("en-GB", loc({
     hour: "2-digit", minute: "2-digit",
-  });
+  }));
 };
 
 export const fmtDateTime = (iso: string | null | undefined): string => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-GB", {
+  return new Date(iso).toLocaleString("en-GB", loc({
     day: "2-digit", month: "short",
     hour: "2-digit", minute: "2-digit",
-  });
+  }));
 };
 
 export const fmtDateTimeFull = (iso: string | null | undefined): string => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-GB", {
+  return new Date(iso).toLocaleString("en-GB", loc({
     day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
-  });
+  }));
 };
 
 // ── Duration ──────────────────────────────────────────────────────────────────
@@ -153,8 +156,7 @@ export const SIZE_SHORT: Record<string, string> = {
   small: "S", medium: "M", large: "L", extra_large: "XL", one_size: "—",
 };
 
-export const fmtSize = (size: string): string =>
-  SIZE_LABELS[size] ?? size;
+export const fmtSize = (size: string): string => SIZE_LABELS[size] ?? size;
 
 // ── Addon type labels ─────────────────────────────────────────────────────────
 export const ADDON_TYPE_LABELS: Record<string, string> = {
@@ -172,24 +174,14 @@ export const normName = (s: string = ""): string =>
 
 // ── Initials ──────────────────────────────────────────────────────────────────
 export const initials = (name: string = ""): string =>
-  name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+  name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
-
+// ── Period formatting ─────────────────────────────────────────────────────────
 export const formatPeriod = (iso: string, granularity: string): string => {
-      const d = new Date(iso);
-      if (granularity === "hourly") {
-        return d.toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-        // → "21 Mar, 22:00"
-      }
-      if (granularity === "monthly") {
-        return d.toLocaleString("en-GB", { month: "short", year: "numeric" });
-        // → "Mar 2026"
-      }
-      // daily
-      return d.toLocaleString("en-GB", { month: "short", day: "numeric" });
-      // → "21 Mar"
-    }
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions =
+    granularity === "hourly"  ? { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false } :
+    granularity === "monthly" ? { month: "short", year: "numeric" } :
+                                { month: "short", day: "numeric" };
+  return d.toLocaleString("en-GB", loc(opts));
+};

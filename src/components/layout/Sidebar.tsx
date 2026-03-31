@@ -142,10 +142,6 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
-  console.log("collapsed:", collapsed);
-  console.log("user:", user);
-  console.log("user role:", user?.role);
-
   const handleSignOut = () => {
     signOut();
     navigate("/login");
@@ -161,7 +157,6 @@ function SidebarContent({ collapsed, onClose }: SidebarContentProps) {
         (search === "" || i.label.toLowerCase().includes(search.toLowerCase())),
     ),
   })).filter((g) => g.items.length > 0);
-  console.log("filtered:", filtered);
 
   return (
     <TooltipProvider delayDuration={0}>
