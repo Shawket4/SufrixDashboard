@@ -138,6 +138,20 @@ const NAV = [
         sub: "Preset discounts",
         roles: ["super_admin", "org_admin", "branch_manager"],
       },
+      {
+        to: "/orders",
+        icon: ShoppingBag,
+        label: "Orders",
+        sub: "Browse by shift",
+        roles: ["super_admin", "org_admin", "branch_manager"],
+      },
+      {
+        to: "/discounts",
+        icon: Tag,
+        label: "Discounts",
+        sub: "Preset discounts",
+        roles: ["super_admin", "org_admin", "branch_manager"],
+      },
     ],
   },
 ] as const;
