@@ -6,6 +6,8 @@ export const getInventoryItems   = (branchId: string)             => client.get<
 export const createInventoryItem = (branchId: string, data: Record<string, unknown>) => client.post<InventoryItem>(`/inventory/branches/${branchId}/items`, data);
 export const updateInventoryItem = (id: string, data: Record<string, unknown>) => client.patch<InventoryItem>(`/inventory/items/${id}`, data);
 export const deleteInventoryItem = (id: string)                   => client.delete(`/inventory/items/${id}`);
+export const getInventoryItemsByOrg = (orgId: string) =>
+  client.get<InventoryItem[]>(`/inventory/orgs/${orgId}/items`);
 
 // Adjustments
 export const getAdjustments   = (branchId: string)             => client.get<InventoryAdjustment[]>(`/inventory/branches/${branchId}/adjustments`);
