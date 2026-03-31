@@ -35,7 +35,6 @@ import {
   fmtDuration,
   fmtPayment,
   PAYMENT_BG,
-  initials,
   TZ,
 } from "@/utils/format";
 import type { Branch, Order, InventoryItem } from "@/types";
@@ -155,7 +154,7 @@ function BranchCard({ branch }: { branch: Branch }) {
 
   const { data: orders = [] } = useQuery({
     queryKey: ["shift-orders", shiftId],
-    queryFn: () => getOrders({ shift_id: shiftId }).then((r) => r.data),
+    queryFn: () => getOrders({ shift_id: shiftId }).then((r) => r.data.data),
     enabled: !!shiftId,
     staleTime: 30_000,
   });
@@ -317,7 +316,7 @@ function RecentOrders({ branches }: { branches: Branch[] }) {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["shift-orders", shiftId],
-    queryFn: () => getOrders({ shift_id: shiftId }).then((r) => r.data),
+    queryFn: () => getOrders({ shift_id: shiftId! }).then((r) => r.data.data),
     enabled: !!shiftId,
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -581,7 +580,7 @@ function SalesSummary({ branches }: { branches: Branch[] }) {
             if (!s.has_open_shift || !s.open_shift?.id) return;
             openCount++;
             const orders = await getOrders({ shift_id: s.open_shift.id }).then(
-              (r) => r.data,
+              (r) => r.data.data,
             );
             const valid = (orders as Order[]).filter(
               (o) => o.status !== "voided",

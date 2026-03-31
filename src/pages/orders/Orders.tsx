@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
@@ -20,15 +20,13 @@ import * as discountsApi from "@/api/discounts";
 import { getErrorMessage } from "@/lib/client";
 import {
   egp,
-  fmtDateTime,
-  fmtTime,
+  fmtDateTimeFull,
   fmtPayment,
   PAYMENT_BG,
   fmtDate,
 } from "@/utils/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -45,7 +43,8 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
-import type { Order, Shift, Discount } from "@/types";
+import type { Order, Discount } from "@/types";
+import * as ExcelJS from "exceljs";
 
 // ── Payment badge ─────────────────────────────────────────────────────────────
 function PaymentBadge({ method }: { method: string }) {
@@ -95,7 +94,7 @@ function OrderDetailDrawer({
             {isVoided && <Badge variant="destructive">Voided</Badge>}
           </div>
           <p className="text-xs text-muted-foreground">
-            {fmtDateTime(order.created_at)} · {order.teller_name}
+            {fmtDateTimeFull(order.created_at)} · {order.teller_name}
           </p>
         </div>
         <PaymentBadge method={order.payment_method} />
@@ -245,7 +244,7 @@ function OrderDetailDrawer({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Time</span>
-              <span>{fmtDateTime(order.created_at)}</span>
+              <span>{fmtDateTimeFull(order.created_at)}</span>
             </div>
             {isVoided && order.void_reason && (
               <div className="flex justify-between">
@@ -320,6 +319,13 @@ export default function Orders() {
   const [to, setTo] = useState<string | null>(null);
   const [selOrder, setSelOrder] = useState<Order | null>(null);
 
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 30;
+
+  useEffect(() => {
+    setPage(1);
+  }, [selBranch, selShift, selTeller, selPayment, selStatus, from, to]);
+
   const { data: branches = [] } = useQuery({
     queryKey: ["branches", orgId],
     queryFn: () => branchesApi.getBranches(orgId).then((r) => r.data),
@@ -352,34 +358,47 @@ export default function Orders() {
       : { branch_id: activeBranch?.id };
 
   const {
-    data: rawOrders = [],
+    data: ordersPage,
     isLoading: ordersLoading,
     refetch,
   } = useQuery({
-    queryKey: ["orders", selShift, activeBranch?.id],
-    queryFn: () => ordersApi.getOrders(queryParams).then((r) => r.data),
+    queryKey: [
+      "orders",
+      selShift,
+      activeBranch?.id,
+      selTeller,
+      selPayment,
+      selStatus,
+      from,
+      to,
+      page,
+    ],
+    queryFn: () =>
+      ordersApi
+        .getOrders({
+          ...(selShift !== "all"
+            ? { shift_id: selShift }
+            : { branch_id: activeBranch?.id }),
+          page,
+          per_page: PER_PAGE,
+          ...(selTeller !== "all" ? { teller_name: selTeller } : {}),
+          ...(selPayment !== "all" ? { payment_method: selPayment } : {}),
+          ...(selStatus !== "all" ? { status: selStatus } : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+        })
+        .then((r) => r.data),
     enabled: !!activeBranch?.id,
+    placeholderData: (prev) => prev, // keep previous page visible while loading next
   });
 
-  // Client-side filters
-  const orders = useMemo(() => {
-    let list = rawOrders;
-    if (selTeller !== "all")
-      list = list.filter((o) => o.teller_name === selTeller);
-    if (selPayment !== "all")
-      list = list.filter((o) => o.payment_method === selPayment);
-    if (selStatus !== "all") list = list.filter((o) => o.status === selStatus);
-    if (from)
-      list = list.filter((o) => new Date(o.created_at) >= new Date(from));
-    if (to) list = list.filter((o) => new Date(o.created_at) <= new Date(to));
-    return list;
-  }, [rawOrders, selTeller, selPayment, selStatus, from, to]);
+  const orders = ordersPage?.data ?? [];
+  const totalOrders = ordersPage?.total ?? 0;
+  const totalPages = ordersPage?.total_pages ?? 1;
 
-  // Derived teller list for filter dropdown
   const tellers = useMemo(() => {
-    const names = [...new Set(rawOrders.map((o) => o.teller_name))].sort();
-    return names;
-  }, [rawOrders]);
+    return [...new Set(orders.map((o) => o.teller_name))].sort();
+  }, [orders]);
 
   // Summary stats
   const active = orders.filter((o) => o.status !== "voided");
@@ -389,32 +408,375 @@ export default function Orders() {
   const totalTip = active.reduce((s, o) => s + (o.tip_amount ?? 0), 0);
 
   // CSV export
-  const exportCSV = () => {
-    const header =
-      "Order#,Time,Teller,Payment,Subtotal,Discount,Tax,Total,Customer,Status";
-    const rows = orders
-      .map((o) =>
-        [
-          o.order_number,
-          fmtDateTime(o.created_at),
+  // ── Polished XLSX Export ──────────────────────────────────────────────────────
+  const exportXLSX = async () => {
+    try {
+      toast.loading("Fetching all orders...");
+
+      const allOrdersResponse = await ordersApi.getOrders({
+        ...(selShift !== "all"
+          ? { shift_id: selShift }
+          : { branch_id: activeBranch?.id }),
+        per_page: 999999,
+        page: 1,
+        ...(selTeller !== "all" ? { teller_name: selTeller } : {}),
+        ...(selPayment !== "all" ? { payment_method: selPayment } : {}),
+        ...(selStatus !== "all" ? { status: selStatus } : {}),
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      });
+
+      const allOrders = allOrdersResponse.data.data ?? [];
+
+      if (allOrders.length === 0) {
+        toast.dismiss();
+        toast.error("No orders to export");
+        return;
+      }
+
+      toast.dismiss();
+      toast.loading(`Generating Excel file with ${allOrders.length} orders...`);
+
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "Rue POS";
+      wb.created = new Date();
+
+      const ws = wb.addWorksheet("Orders", {
+        pageSetup: { fitToPage: true, fitToWidth: 1, orientation: "landscape" },
+        views: [{ state: "frozen", ySplit: 7 }],
+      });
+
+      // ── Palette (Logo Blue + Neutral Gray Borders) ─────────────────────────────
+      const C = {
+        logoBlue: "FF0039BF", // Authentic Logo Blue
+        navyDark: "FF111827", // Slate-900 for Totals text
+        white: "FFFFFFFF",
+        rowEven: "FFF9FAFB", // Very light gray for zebra striping
+        border: "FFE5E7EB", // Neutral Gray (Fixed: no blue on borders)
+        textDark: "FF111827",
+        textMuted: "FF6B7280",
+        green: "FF16A34A",
+        greenBg: "FFDCFCE7",
+        red: "FFDC2626",
+        redBg: "FFFEE2E2",
+        amber: "FFD97706",
+        amberBg: "FFFEF3C7",
+        violet: "FF7C3AED",
+      };
+
+      // Payment colors from format.ts (converted to ARGB)
+      const PAYMENT_ARGB: Record<string, string> = {
+        cash: "FF16A34A",
+        card: "FF1D4ED8",
+        digital_wallet: "FF7C3AED",
+        mixed: "FFF59E0B",
+        talabat_online: "FFEA580C",
+        talabat_cash: "FF9A3412",
+      };
+
+      // ── Helpers ─────────────────────────────────────────────────────────────────
+      const border = (cell: ExcelJS.Cell, color = C.border) => {
+        const s = { style: "thin" as const, color: { argb: color } };
+        cell.border = { top: s, bottom: s, left: s, right: s };
+      };
+
+      const styleRow = (
+        row: ExcelJS.Row,
+        bgARGB: string,
+        fontColor = C.textDark,
+        bold = false,
+        size = 10,
+      ) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: bgARGB },
+          };
+          cell.font = { name: "Cairo", size, bold, color: { argb: fontColor } };
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: false,
+          };
+        });
+      };
+
+      // ── Column definitions ───────────────────────────────────────────────────────
+      ws.columns = [
+        { key: "order_number", width: 12 },
+        { key: "created_at", width: 22 },
+        { key: "teller_name", width: 20 },
+        { key: "customer", width: 20 },
+        { key: "payment", width: 18 },
+        { key: "subtotal", width: 15 },
+        { key: "discount", width: 15 },
+        { key: "tax", width: 15 },
+        { key: "total", width: 15 },
+        { key: "change", width: 15 },
+        { key: "tip", width: 15 },
+        { key: "status", width: 15 },
+      ];
+
+      const lastCol = "L";
+      const activeOrders = allOrders.filter((o) => o.status !== "voided");
+      const voidedOrders = allOrders.filter((o) => o.status === "voided");
+
+      // Calculate as raw numbers
+      const totalRevenue =
+        activeOrders.reduce((s, o) => s + o.total_amount, 0) / 100;
+      const totalDisc =
+        activeOrders.reduce((s, o) => s + (o.discount_amount ?? 0), 0) / 100;
+      const totalTip =
+        activeOrders.reduce((s, o) => s + (o.tip_amount ?? 0), 0) / 100;
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // ROW 1 — Logo Banner (Fixed Positioning: left 0.35 top 0.3)
+      // ─────────────────────────────────────────────────────────────────────────────
+      ws.mergeCells(`A1:${lastCol}1`);
+      ws.getRow(1).height = 65;
+      const titleCell = ws.getCell("A1");
+      titleCell.value = "Orders Report";
+      titleCell.font = {
+        name: "Cairo",
+        size: 16,
+        bold: true,
+        color: { argb: C.logoBlue },
+      };
+      titleCell.alignment = {
+        horizontal: "right",
+        vertical: "middle",
+        indent: 2,
+      };
+
+      try {
+        const response = await fetch("/TheRue.png");
+        const arrayBuffer = await response.arrayBuffer();
+        const logoId = wb.addImage({ buffer: arrayBuffer, extension: "png" });
+        ws.addImage(logoId, {
+          tl: { col: 0.2, row: 0.35 },
+          ext: { width: 135, height: 57 },
+        });
+      } catch (e) {
+        console.warn("Logo failed to load");
+      }
+
+      // ROW 2 — Sub-info
+      ws.mergeCells(`A2:${lastCol}2`);
+      const subCell = ws.getCell("A2");
+      subCell.value = `Branch: ${activeBranch?.name ?? "All"} · Generated: ${new Date().toLocaleString("en-EG")}`;
+      subCell.font = { name: "Cairo", size: 9, color: { argb: C.textMuted } };
+      subCell.alignment = { horizontal: "center", vertical: "middle" };
+      ws.getRow(2).height = 20;
+
+      ws.mergeCells(`A3:${lastCol}3`);
+      ws.getRow(3).height = 8;
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // ROWS 4–5 — Summary stats (Stored as Numbers)
+      // ─────────────────────────────────────────────────────────────────────────────
+      const statLabels = [
+        "Completed",
+        "Voided",
+        "Revenue",
+        "Discounts",
+        "Tips",
+      ];
+      const statValues = [
+        activeOrders.length,
+        voidedOrders.length,
+        totalRevenue,
+        totalDisc,
+        totalTip,
+      ];
+      const statColors = [C.logoBlue, C.red, C.green, C.amber, C.violet];
+      const statRanges = ["A", "C", "E", "G", "I"];
+      const statEndCols = ["B", "D", "F", "H", "J"];
+
+      statLabels.forEach((label, i) => {
+        const startCol = statRanges[i];
+        ws.mergeCells(`${startCol}4:${statEndCols[i]}4`);
+        const lc = ws.getCell(`${startCol}4`);
+        lc.value = label;
+        lc.font = { name: "Cairo", size: 8, color: { argb: C.textMuted } };
+        lc.alignment = { horizontal: "center", vertical: "middle" };
+
+        ws.mergeCells(`${startCol}5:${statEndCols[i]}5`);
+        const vc = ws.getCell(`${startCol}5`);
+        vc.value = statValues[i]; // Number type
+        vc.font = {
+          name: "Cairo",
+          size: 12,
+          bold: true,
+          color: { argb: statColors[i] },
+        };
+        vc.alignment = { horizontal: "center", vertical: "middle" };
+        if (i >= 2) vc.numFmt = '#,##0.00 "EGP"';
+      });
+
+      ws.mergeCells(`A6:${lastCol}6`);
+      ws.getRow(6).height = 8;
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // ROW 7 — Column headers
+      // ─────────────────────────────────────────────────────────────────────────────
+      const headers = [
+        "#",
+        "Date & Time",
+        "Teller",
+        "Customer",
+        "Payment",
+        "Subtotal",
+        "Discount",
+        "Tax",
+        "Total",
+        "Change",
+        "Tip",
+        "Status",
+      ];
+      const headerRow = ws.addRow(headers);
+      headerRow.height = 30;
+      headerRow.eachCell((cell) => {
+        cell.font = {
+          name: "Cairo",
+          size: 10,
+          bold: true,
+          color: { argb: C.white },
+        };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: C.logoBlue },
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        border(cell, C.border); // Neutral Gray Border
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // DATA ROWS
+      // ─────────────────────────────────────────────────────────────────────────────
+      allOrders.forEach((o, idx) => {
+        const isVoided = o.status === "voided";
+        const rowBg = idx % 2 === 0 ? C.rowEven : C.white;
+
+        const row = ws.addRow([
+          `#${o.order_number}`,
+          new Date(o.created_at).toLocaleString("en-EG"),
           o.teller_name,
-          fmtPayment(o.payment_method),
-          (o.subtotal / 100).toFixed(2),
-          (o.discount_amount / 100).toFixed(2),
-          (o.tax_amount / 100).toFixed(2),
-          (o.total_amount / 100).toFixed(2),
-          o.customer_name ?? "",
-          o.status,
-        ].join(","),
-      )
-      .join("\n");
-    const blob = new Blob([header + "\n" + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `orders-${activeBranch?.name ?? "export"}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+          o.customer_name ?? "—",
+          o.payment_method.toUpperCase().replace("_", " "),
+          o.subtotal / 100,
+          (o.discount_amount ?? 0) / 100,
+          (o.tax_amount ?? 0) / 100,
+          o.total_amount / 100,
+          (o.change_given ?? 0) / 100,
+          (o.tip_amount ?? 0) / 100,
+          isVoided ? "Voided" : "Completed",
+        ]);
+
+        row.height = 24;
+        row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+          cell.font = {
+            name: "Cairo",
+            size: 10,
+            color: { argb: isVoided ? C.textMuted : C.textDark },
+            italic: isVoided,
+          };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: rowBg },
+          };
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+          border(cell, C.border); // Neutral Gray Border
+
+          // Payment colors
+          if (colNum === 5) {
+            cell.font = {
+              name: "Cairo",
+              size: 9,
+              bold: true,
+              color: { argb: PAYMENT_ARGB[o.payment_method] || C.logoBlue },
+            };
+          }
+
+          // Currency formatting (Pure numbers for math)
+          if (colNum >= 6 && colNum <= 11) {
+            cell.numFmt = "#,##0.00";
+          }
+
+          if (colNum === 12) {
+            cell.font = {
+              bold: true,
+              color: { argb: isVoided ? C.red : C.green },
+            };
+          }
+        });
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // TOTALS ROW
+      // ─────────────────────────────────────────────────────────────────────────────
+      const dataStart = 8;
+      const dataEnd = ws.rowCount;
+      const totalsRow = ws.addRow([
+        "",
+        "TOTALS",
+        "",
+        "",
+        "",
+        { formula: `=SUM(F${dataStart}:F${dataEnd})` },
+        { formula: `=SUM(G${dataStart}:G${dataEnd})` },
+        { formula: `=SUM(H${dataStart}:H${dataEnd})` },
+        { formula: `=SUM(I${dataStart}:I${dataEnd})` },
+        { formula: `=SUM(J${dataStart}:J${dataEnd})` },
+        { formula: `=SUM(K${dataStart}:K${dataEnd})` },
+        "",
+      ]);
+
+      totalsRow.height = 28;
+      totalsRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: C.logoBlue },
+        };
+        cell.font = {
+          name: "Cairo",
+          size: 10,
+          bold: true,
+          color: { argb: C.white },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        border(cell, C.border); // Neutral Gray Border
+        if (colNum >= 6 && colNum <= 11) cell.numFmt = "#,##0.00";
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // Download
+      // ─────────────────────────────────────────────────────────────────────────────
+      toast.dismiss();
+      toast.loading("Downloading file...");
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Orders-${activeBranch?.name ?? "Export"}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.dismiss();
+      toast.success(`Exported ${allOrders.length} orders successfully`);
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Export failed");
+      console.error(error);
+    }
   };
 
   const columns: ColumnDef<Order, any>[] = [
@@ -434,7 +796,7 @@ export default function Orders() {
       header: "Time",
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {fmtDateTime(row.original.created_at)}
+          {fmtDateTimeFull(row.original.created_at)}
         </span>
       ),
     },
@@ -530,6 +892,7 @@ export default function Orders() {
     setSelStatus("all");
     setFrom(null);
     setTo(null);
+    setPage(1);
   };
   const hasFilters =
     selShift !== "all" ||
@@ -552,10 +915,10 @@ export default function Orders() {
             <Button
               variant="outline"
               size="sm"
-              onClick={exportCSV}
+              onClick={exportXLSX}
               disabled={orders.length === 0}
             >
-              <Download size={13} /> Export CSV
+              <Download size={13} /> Export Excel
             </Button>
           </div>
         }
@@ -769,9 +1132,83 @@ export default function Orders() {
           columns={columns}
           searchKey="teller_name"
           searchPlaceholder="Search by teller…"
-          pageSize={30}
           onRowClick={setSelOrder}
         />
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">
+            Showing {(page - 1) * PER_PAGE + 1}–
+            {Math.min(page * PER_PAGE, totalOrders)} of {totalOrders} orders
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(1)}
+            >
+              «
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              ‹ Prev
+            </Button>
+
+            {/* Page number pills */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(
+                (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+              )
+              .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === "…" ? (
+                  <span
+                    key={`ellipsis-${i}`}
+                    className="px-2 text-muted-foreground text-sm"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={p === page ? "default" : "outline"}
+                    size="sm"
+                    className="w-8 px-0"
+                    onClick={() => setPage(p as number)}
+                  >
+                    {p}
+                  </Button>
+                ),
+              )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next ›
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage(totalPages)}
+            >
+              »
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* ── Order detail drawer ───────────────────────────────────────────────── */}
