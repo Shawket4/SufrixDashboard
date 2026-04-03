@@ -52,22 +52,21 @@ import { getErrorMessage } from "@/lib/client";
 
 const UNITS: InventoryUnit[] = ["g", "kg", "ml", "l", "pcs"];
 
-// ── Branch selector (uses store) ──────────────────────────────────────────────
-function useBranchOrgIds() {
-  const user = useAuthStore((s) => s.user);
-  const selectedOrgId    = useAppStore((s) => s.selectedOrgId);
-  const selectedBranchId = useAppStore((s) => s.selectedBranchId);
-  const orgId    = selectedOrgId    ?? user?.org_id    ?? "";
-  const branchId = selectedBranchId ?? "";
-  return { orgId, branchId };
+// ── Shared form field ─────────────────────────────────────────────────────────
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium">{label}</Label>
+      {children}
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB 1 — Org Catalog
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function CatalogTab() {
-  const { orgId } = useBranchOrgIds();
+function CatalogTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
 
   const { data: items = [], isLoading } = useQuery({
@@ -133,14 +132,12 @@ function CatalogTab() {
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
-  // ── Delete ─────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: (id: string) => inventoryApi.deleteCatalogItem(orgId, id),
     onSuccess:  () => { toast.success("Ingredient deleted"); qc.invalidateQueries({ queryKey: ["org-catalog"] }); },
     onError:    (e) => toast.error(getErrorMessage(e)),
   });
 
-  // ── Columns ────────────────────────────────────────────────────────────
   const cols: ColumnDef<OrgIngredient, any>[] = [
     {
       accessorKey: "name",
@@ -230,20 +227,20 @@ function CatalogTab() {
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>New Catalog Ingredient</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>Name *</Label>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Catalog Ingredient</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Field label="Name *">
               <Input
                 value={createForm.name}
                 onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Oat Milk"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Unit *</Label>
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Unit *">
                 <Select
                   value={createForm.unit}
                   onValueChange={(v) => setCreateForm((f) => ({ ...f, unit: v as InventoryUnit }))}
@@ -253,9 +250,8 @@ function CatalogTab() {
                     {UNITS.map((u) => <SelectItem key={u} value={u}>{fmtUnit(u)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Cost / unit (piastres)</Label>
+              </Field>
+              <Field label="Cost / unit (pt)">
                 <Input
                   type="number"
                   min="0"
@@ -263,20 +259,22 @@ function CatalogTab() {
                   onChange={(e) => setCreateForm((f) => ({ ...f, cost_per_unit: e.target.value }))}
                   placeholder="0"
                 />
-              </div>
+              </Field>
             </div>
-            <div className="space-y-1">
-              <Label>Description</Label>
+            <Field label="Description">
               <Input
                 value={createForm.description}
                 onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="Optional"
               />
-            </div>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!createForm.name.trim() || createMutation.isPending}>
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={!createForm.name.trim() || createMutation.isPending}
+            >
               {createMutation.isPending ? "Creating…" : "Create"}
             </Button>
           </DialogFooter>
@@ -285,41 +283,39 @@ function CatalogTab() {
 
       {/* Edit dialog */}
       <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Edit: {editItem?.name}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>Name</Label>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit: {editItem?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Field label="Name">
               <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Unit</Label>
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Unit">
                 <Select value={editForm.unit} onValueChange={(v) => setEditForm((f) => ({ ...f, unit: v as InventoryUnit }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {UNITS.map((u) => <SelectItem key={u} value={u}>{fmtUnit(u)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Cost / unit</Label>
+              </Field>
+              <Field label="Cost / unit (pt)">
                 <Input type="number" min="0" value={editForm.cost_per_unit} onChange={(e) => setEditForm((f) => ({ ...f, cost_per_unit: e.target.value }))} />
-              </div>
+              </Field>
             </div>
-            <div className="space-y-1">
-              <Label>Description</Label>
+            <Field label="Description">
               <Input value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} />
-            </div>
-            <div className="flex items-center gap-3">
+            </Field>
+            <div className="flex items-center gap-3 pt-1">
               <Switch checked={editForm.is_active} onCheckedChange={(v) => setEditForm((f) => ({ ...f, is_active: v }))} />
-              <Label>Active</Label>
+              <Label className="text-sm">Active</Label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
             <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending}>
-              {editMutation.isPending ? "Saving…" : "Save"}
+              {editMutation.isPending ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -332,8 +328,7 @@ function CatalogTab() {
 // TAB 2 — Branch Stock
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StockTab() {
-  const { orgId, branchId } = useBranchOrgIds();
+function StockTab({ orgId, branchId }: { orgId: string; branchId: string }) {
   const qc = useQueryClient();
 
   const { data: stock = [], isLoading: stockLoading } = useQuery({
@@ -348,7 +343,6 @@ function StockTab() {
     enabled:  !!orgId,
   });
 
-  // Available = catalog items not yet tracked on this branch
   const trackedIds = new Set(stock.map((s) => s.org_ingredient_id));
   const available  = catalog.filter((c) => c.is_active && !trackedIds.has(c.id));
 
@@ -372,7 +366,7 @@ function StockTab() {
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
-  // ── Edit threshold inline ──────────────────────────────────────────────
+  // ── Inline threshold edit ──────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editThresh, setEditThresh] = useState("");
 
@@ -487,7 +481,7 @@ function StockTab() {
     },
   ];
 
-  if (!branchId) return <EmptyState icon={Package} title="Select a branch" sub="Choose a branch from the top bar to view its stock." />;
+  if (!branchId) return <EmptyState icon={Package} title="Select a branch" sub="Choose a branch above to view its stock." />;
   if (stockLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
   return (
@@ -515,11 +509,12 @@ function StockTab() {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add Ingredient to Branch</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>Ingredient *</Label>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Ingredient to Branch</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Field label="Ingredient *">
               <Select value={addForm.org_ingredient_id} onValueChange={(v) => setAddForm((f) => ({ ...f, org_ingredient_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select ingredient…" /></SelectTrigger>
                 <SelectContent>
@@ -528,21 +523,30 @@ function StockTab() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Opening Stock</Label>
-                <Input type="number" min="0" step="0.001" placeholder="0" value={addForm.current_stock} onChange={(e) => setAddForm((f) => ({ ...f, current_stock: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <Label>Reorder At</Label>
-                <Input type="number" min="0" step="0.001" placeholder="0" value={addForm.reorder_threshold} onChange={(e) => setAddForm((f) => ({ ...f, reorder_threshold: e.target.value }))} />
-              </div>
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Opening Stock">
+                <Input
+                  type="number" min="0" step="0.001" placeholder="0"
+                  value={addForm.current_stock}
+                  onChange={(e) => setAddForm((f) => ({ ...f, current_stock: e.target.value }))}
+                />
+              </Field>
+              <Field label="Reorder At">
+                <Input
+                  type="number" min="0" step="0.001" placeholder="0"
+                  value={addForm.reorder_threshold}
+                  onChange={(e) => setAddForm((f) => ({ ...f, reorder_threshold: e.target.value }))}
+                />
+              </Field>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={() => addMutation.mutate()} disabled={!addForm.org_ingredient_id || addMutation.isPending}>
+            <Button
+              onClick={() => addMutation.mutate()}
+              disabled={!addForm.org_ingredient_id || addMutation.isPending}
+            >
               {addMutation.isPending ? "Adding…" : "Add to Branch"}
             </Button>
           </DialogFooter>
@@ -556,8 +560,7 @@ function StockTab() {
 // TAB 3 — Adjustments
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function AdjustmentsTab() {
-  const { branchId } = useBranchOrgIds();
+function AdjustmentsTab({ branchId }: { branchId: string }) {
   const qc = useQueryClient();
 
   const { data: adjs = [], isLoading } = useQuery({
@@ -599,13 +602,13 @@ function AdjustmentsTab() {
   });
 
   const adjTypeBadge = (type: string) => {
-    const colors: Record<string, string> = {
+    const styles: Record<string, string> = {
       add:          "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300",
       remove:       "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300",
       transfer_in:  "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300",
       transfer_out: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300",
     };
-    return <Badge className={colors[type] ?? ""}>{type.replace("_", " ")}</Badge>;
+    return <Badge className={styles[type] ?? ""}>{type.replace("_", " ")}</Badge>;
   };
 
   const cols: ColumnDef<BranchInventoryAdjustment, any>[] = [
@@ -654,7 +657,7 @@ function AdjustmentsTab() {
     },
   ];
 
-  if (!branchId) return <EmptyState icon={ClipboardList} title="Select a branch" sub="Choose a branch to view its adjustments." />;
+  if (!branchId) return <EmptyState icon={ClipboardList} title="Select a branch" sub="Choose a branch above to view its adjustments." />;
   if (isLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
   return (
@@ -676,25 +679,25 @@ function AdjustmentsTab() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Manual Stock Adjustment</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>Ingredient *</Label>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manual Stock Adjustment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Field label="Ingredient *">
               <Select value={form.branch_inventory_id} onValueChange={(v) => setForm((f) => ({ ...f, branch_inventory_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select ingredient…" /></SelectTrigger>
                 <SelectContent>
                   {stock.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.ingredient_name} — stock: {Number(s.current_stock).toFixed(3)} {fmtUnit(s.unit)}
+                      {s.ingredient_name} — {Number(s.current_stock).toFixed(3)} {fmtUnit(s.unit)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Type *</Label>
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Type *">
                 <Select value={form.adjustment_type} onValueChange={(v) => setForm((f) => ({ ...f, adjustment_type: v as "add" | "remove" }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -702,26 +705,25 @@ function AdjustmentsTab() {
                     <SelectItem value="remove">Remove</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Quantity *</Label>
+              </Field>
+              <Field label="Quantity *">
                 <Input
                   type="number"
                   min="0.001"
                   step="0.001"
+                  placeholder="0.000"
                   value={form.quantity}
                   onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
                 />
-              </div>
+              </Field>
             </div>
-            <div className="space-y-1">
-              <Label>Note * <span className="text-muted-foreground text-xs">(required)</span></Label>
+            <Field label={<>Note <span className="text-muted-foreground text-xs font-normal">(required)</span></>}>
               <Input
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 placeholder="Reason for adjustment…"
               />
-            </div>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -742,8 +744,7 @@ function AdjustmentsTab() {
 // TAB 4 — Transfers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function TransfersTab() {
-  const { orgId, branchId } = useBranchOrgIds();
+function TransfersTab({ orgId, branchId }: { orgId: string; branchId: string }) {
   const qc = useQueryClient();
 
   const [direction, setDirection] = useState<"" | "incoming" | "outgoing">("");
@@ -774,6 +775,11 @@ function TransfersTab() {
     quantity:              "",
     note:                  "",
   });
+
+  // Keep source branch in sync when branchId changes
+  React.useEffect(() => {
+    setForm((f) => ({ ...f, source_branch_id: branchId }));
+  }, [branchId]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -809,7 +815,7 @@ function TransfersTab() {
       accessorKey: "source_branch_name",
       header: "From",
       cell: ({ row }) => (
-        <span className={row.original.source_branch_id === branchId ? "font-semibold" : "text-muted-foreground text-sm"}>
+        <span className={row.original.source_branch_id === branchId ? "font-semibold text-sm" : "text-muted-foreground text-sm"}>
           {row.original.source_branch_name}
         </span>
       ),
@@ -818,7 +824,7 @@ function TransfersTab() {
       accessorKey: "destination_branch_name",
       header: "To",
       cell: ({ row }) => (
-        <span className={row.original.destination_branch_id === branchId ? "font-semibold" : "text-muted-foreground text-sm"}>
+        <span className={row.original.destination_branch_id === branchId ? "font-semibold text-sm" : "text-muted-foreground text-sm"}>
           {row.original.destination_branch_name}
         </span>
       ),
@@ -851,7 +857,7 @@ function TransfersTab() {
     },
   ];
 
-  if (!branchId) return <EmptyState icon={ArrowLeftRight} title="Select a branch" sub="Choose a branch to view its transfers." />;
+  if (!branchId) return <EmptyState icon={ArrowLeftRight} title="Select a branch" sub="Choose a branch above to view its transfers." />;
   if (isLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
   return (
@@ -862,7 +868,7 @@ function TransfersTab() {
         actions={
           <div className="flex items-center gap-2">
             <Select value={direction} onValueChange={(v) => setDirection(v as any)}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="All transfers" /></SelectTrigger>
+              <SelectTrigger className="w-36 h-9"><SelectValue placeholder="All transfers" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All</SelectItem>
                 <SelectItem value="incoming">Incoming</SelectItem>
@@ -883,21 +889,21 @@ function TransfersTab() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Transfer Stock</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>From Branch *</Label>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer Stock</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="From Branch *">
                 <Select value={form.source_branch_id} onValueChange={(v) => setForm((f) => ({ ...f, source_branch_id: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>To Branch *</Label>
+              </Field>
+              <Field label="To Branch *">
                 <Select value={form.destination_branch_id} onValueChange={(v) => setForm((f) => ({ ...f, destination_branch_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                   <SelectContent>
@@ -906,11 +912,10 @@ function TransfersTab() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Ingredient *</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Ingredient *">
                 <Select value={form.org_ingredient_id} onValueChange={(v) => setForm((f) => ({ ...f, org_ingredient_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                   <SelectContent>
@@ -919,16 +924,22 @@ function TransfersTab() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Quantity *</Label>
-                <Input type="number" min="0.001" step="0.001" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
-              </div>
+              </Field>
+              <Field label="Quantity *">
+                <Input
+                  type="number" min="0.001" step="0.001" placeholder="0.000"
+                  value={form.quantity}
+                  onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+                />
+              </Field>
             </div>
-            <div className="space-y-1">
-              <Label>Note</Label>
-              <Input value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} placeholder="Optional reason" />
-            </div>
+            <Field label="Note">
+              <Input
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                placeholder="Optional reason"
+              />
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -950,19 +961,65 @@ function TransfersTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export default function Inventory() {
+  const user     = useAuthStore((s) => s.user);
+  const orgId    = useAppStore((s) => s.selectedOrgId) ?? user?.org_id ?? "";
+  const storeBranchId = useAppStore((s) => s.selectedBranchId) ?? "";
+
+  const [selBranch, setSelBranch] = useState(storeBranchId);
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches", orgId],
+    queryFn:  () => branchesApi.getBranches(orgId).then((r) => r.data),
+    enabled:  !!orgId,
+  });
+
+  // Auto-select first branch if none chosen
+  React.useEffect(() => {
+    if (branches.length > 0 && !selBranch) setSelBranch(branches[0].id);
+  }, [branches, selBranch]);
+
+  const activeBranch = branches.find((b) => b.id === selBranch) ?? branches[0];
+
   return (
-    <div className="p-6">
-      <Tabs defaultValue="catalog">
-        <TabsList className="mb-6">
-          <TabsTrigger value="catalog"><Boxes size={14} className="mr-1.5" /> Catalog</TabsTrigger>
-          <TabsTrigger value="stock"><Package size={14} className="mr-1.5" /> Branch Stock</TabsTrigger>
-          <TabsTrigger value="adjustments"><ClipboardList size={14} className="mr-1.5" /> Adjustments</TabsTrigger>
-          <TabsTrigger value="transfers"><ArrowLeftRight size={14} className="mr-1.5" /> Transfers</TabsTrigger>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <PageHeader
+        title="Inventory"
+        sub={activeBranch ? activeBranch.name : "Manage ingredients and branch stock"}
+        actions={
+          branches.length > 1 && (
+            <Select value={selBranch} onValueChange={setSelBranch}>
+              <SelectTrigger className="w-40 h-9">
+                <SelectValue placeholder="Branch…" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
+      />
+
+      <Tabs defaultValue="catalog" className="mt-6">
+        <TabsList className="mb-6 flex-wrap h-auto gap-1">
+          <TabsTrigger value="catalog"><Boxes size={14} className="mr-1.5" />Catalog</TabsTrigger>
+          <TabsTrigger value="stock"><Package size={14} className="mr-1.5" />Branch Stock</TabsTrigger>
+          <TabsTrigger value="adjustments"><ClipboardList size={14} className="mr-1.5" />Adjustments</TabsTrigger>
+          <TabsTrigger value="transfers"><ArrowLeftRight size={14} className="mr-1.5" />Transfers</TabsTrigger>
         </TabsList>
-        <TabsContent value="catalog"><CatalogTab /></TabsContent>
-        <TabsContent value="stock"><StockTab /></TabsContent>
-        <TabsContent value="adjustments"><AdjustmentsTab /></TabsContent>
-        <TabsContent value="transfers"><TransfersTab /></TabsContent>
+        <TabsContent value="catalog">
+          <CatalogTab orgId={orgId} />
+        </TabsContent>
+        <TabsContent value="stock">
+          <StockTab orgId={orgId} branchId={activeBranch?.id ?? ""} />
+        </TabsContent>
+        <TabsContent value="adjustments">
+          <AdjustmentsTab branchId={activeBranch?.id ?? ""} />
+        </TabsContent>
+        <TabsContent value="transfers">
+          <TransfersTab orgId={orgId} branchId={activeBranch?.id ?? ""} />
+        </TabsContent>
       </Tabs>
     </div>
   );
