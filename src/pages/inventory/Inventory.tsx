@@ -200,12 +200,13 @@ function CatalogTab({ orgId }: { orgId: string }) {
   });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", unit: "kg" as InventoryUnit, description: "", cost_per_unit: "" });
+  const [createForm, setCreateForm] = useState({ name: "", unit: "kg" as InventoryUnit, category: "general", description: "", cost_per_unit: "" });
 
   const createMutation = useMutation({
     mutationFn: () => inventoryApi.createCatalogItem(orgId, {
       name:          createForm.name.trim(),
       unit:          createForm.unit,
+      category:      createForm.category,
       description:   createForm.description || undefined,
       cost_per_unit: createForm.cost_per_unit ? Number(createForm.cost_per_unit) : 0,
     }),
@@ -213,22 +214,22 @@ function CatalogTab({ orgId }: { orgId: string }) {
       toast.success("Ingredient added to catalog");
       qc.invalidateQueries({ queryKey: ["org-catalog"] });
       setCreateOpen(false);
-      setCreateForm({ name: "", unit: "kg", description: "", cost_per_unit: "" });
+      setCreateForm({ name: "", unit: "kg", category: "general", description: "", cost_per_unit: "" });
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
   const [editItem, setEditItem] = useState<OrgIngredient | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", unit: "kg" as InventoryUnit, description: "", cost_per_unit: "", is_active: true });
+  const [editForm, setEditForm] = useState({ name: "", unit: "kg" as InventoryUnit, category: "general", description: "", cost_per_unit: "", is_active: true });
 
   const openEdit = (item: OrgIngredient) => {
     setEditItem(item);
-    setEditForm({ name: item.name, unit: item.unit, description: item.description ?? "", cost_per_unit: String(item.cost_per_unit), is_active: item.is_active });
+    setEditForm({ name: item.name, unit: item.unit, category: item.category ?? "general", description: item.description ?? "", cost_per_unit: String(item.cost_per_unit), is_active: item.is_active });
   };
 
   const editMutation = useMutation({
     mutationFn: () => inventoryApi.updateCatalogItem(orgId, editItem!.id, {
-      name: editForm.name, unit: editForm.unit,
+      name: editForm.name, unit: editForm.unit, category: editForm.category,
       description: editForm.description || undefined,
       cost_per_unit: Number(editForm.cost_per_unit),
       is_active: editForm.is_active,
@@ -251,6 +252,7 @@ function CatalogTab({ orgId }: { orgId: string }) {
         <div>
           <p className="font-semibold text-sm">{row.original.name}</p>
           {row.original.description && <p className="text-xs text-muted-foreground">{row.original.description}</p>}
+          {row.original.category && row.original.category !== "general" && <Badge variant="secondary" className="mt-1">{row.original.category.replace("_", " ")}</Badge>}
         </div>
       ),
     },
@@ -305,6 +307,16 @@ function CatalogTab({ orgId }: { orgId: string }) {
                 <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{fmtUnit(u)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
+            <Field label="Category *">
+              <Select value={createForm.category} onValueChange={(v) => setCreateForm((f) => ({ ...f, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="milk">Milk</SelectItem>
+                  <SelectItem value="coffee_bean">Coffee Bean</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Cost per unit (pt)">
               <Input type="number" min="0" value={createForm.cost_per_unit} onChange={(e) => setCreateForm((f) => ({ ...f, cost_per_unit: e.target.value }))} placeholder="0" />
             </Field>
@@ -333,6 +345,16 @@ function CatalogTab({ orgId }: { orgId: string }) {
               <Select value={editForm.unit} onValueChange={(v) => setEditForm((f) => ({ ...f, unit: v as InventoryUnit }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{fmtUnit(u)}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Category *">
+              <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="milk">Milk</SelectItem>
+                  <SelectItem value="coffee_bean">Coffee Bean</SelectItem>
+                </SelectContent>
               </Select>
             </Field>
             <Field label="Cost per unit (pt)">

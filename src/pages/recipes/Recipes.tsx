@@ -12,7 +12,7 @@ import * as recipesApi from "@/api/recipes";
 import * as inventoryApi from "@/api/inventory";
 import type {
   MenuItem, DrinkRecipe, AddonItem, AddonIngredient,
-  AddonSlot, AddonOverride, OrgIngredient,
+  AddonSlot, MenuItemOptionalField, OrgIngredient,
 } from "@/types";
 import { egp, fmtUnit, SIZE_LABELS } from "@/utils/format";
 import { Button } from "@/components/ui/button";
@@ -85,54 +85,7 @@ function IngredientPicker({
   );
 }
 
-function ReplacePicker({
-  items, value, onChange,
-}: {
-  items: OrgIngredient[];
-  value: string | null;
-  onChange: (id: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const selected = items.find((i) => i.id === value);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open}
-          className="w-full justify-between h-8 text-xs font-normal">
-          <span className="truncate text-muted-foreground">
-            {selected ? selected.name : "None (additive)"}
-          </span>
-          <ChevronsUpDown size={12} className="ml-2 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search ingredient to replace…" className="h-8 text-xs" />
-          <CommandList>
-            <CommandEmpty className="py-4 text-xs text-center text-muted-foreground">No match</CommandEmpty>
-            <CommandGroup>
-              <CommandItem value="__none__"
-                onSelect={() => { onChange(null); setOpen(false); }}
-                className="text-xs text-muted-foreground">
-                <Check size={12} className={`mr-2 ${!value ? "opacity-100" : "opacity-0"}`} />
-                None (additive)
-              </CommandItem>
-              {items.map((ing) => (
-                <CommandItem key={ing.id} value={ing.name}
-                  onSelect={() => { onChange(ing.id); setOpen(false); }}
-                  className="text-xs">
-                  <Check size={12}
-                    className={`mr-2 ${ing.id === value ? "opacity-100" : "opacity-0"}`} />
-                  {ing.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
+// ReplacePicker removed
 
 function AddonPicker({
   items, value, onChange, placeholder = "None",
@@ -302,7 +255,7 @@ function AddonRecipePanel({ addon, orgId }: { addon: AddonItem; orgId: string })
   });
   const [form, setForm] = useState({
     org_ingredient_id: null as string | null, ingredient_name: "",
-    ingredient_unit: "", quantity_used: "", replaces_org_ingredient_id: null as string | null,
+    ingredient_unit: "", quantity_used: "",
   });
   const uniqueInvItems = useMemo(
     () => Array.from(new Map(invItems.map((i) => [i.name, i])).values()),
@@ -312,12 +265,11 @@ function AddonRecipePanel({ addon, orgId }: { addon: AddonItem; orgId: string })
     mutationFn: () => recipesApi.upsertAddonIngredient(addon.id, {
       org_ingredient_id: form.org_ingredient_id, ingredient_name: form.ingredient_name,
       ingredient_unit: form.ingredient_unit, quantity_used: parseFloat(form.quantity_used),
-      replaces_org_ingredient_id: form.replaces_org_ingredient_id ?? null,
     }),
     onSuccess: () => {
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["addon-ingredients", addon.id] });
-      setForm((f) => ({ ...f, org_ingredient_id: null, ingredient_name: "", ingredient_unit: "", quantity_used: "", replaces_org_ingredient_id: null }));
+      setForm((f) => ({ ...f, org_ingredient_id: null, ingredient_name: "", ingredient_unit: "", quantity_used: "" }));
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
@@ -326,10 +278,7 @@ function AddonRecipePanel({ addon, orgId }: { addon: AddonItem; orgId: string })
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["addon-ingredients", addon.id] }); },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
-  const replacesName = (ing: AddonIngredient) => {
-    if (!ing.replaces_org_ingredient_id) return null;
-    return invItems.find((i) => i.id === ing.replaces_org_ingredient_id)?.name ?? "Unknown";
-  };
+  
   return (
     <div className="p-4 space-y-4">
       <div className="space-y-1">
@@ -342,11 +291,6 @@ function AddonRecipePanel({ addon, orgId }: { addon: AddonItem; orgId: string })
                     <p className="text-sm font-medium">{r.ingredient_name}</p>
                     <p className="text-xs text-muted-foreground">
                       {r.quantity_used} {fmtUnit(r.unit)}
-                      {replacesName(r) && (
-                        <span className="ml-2 text-amber-600 dark:text-amber-400">
-                          · replaces {replacesName(r)}
-                        </span>
-                      )}
                     </p>
                   </div>
                   <Button variant="ghost" size="icon-sm"
@@ -365,20 +309,10 @@ function AddonRecipePanel({ addon, orgId }: { addon: AddonItem; orgId: string })
             onSelect={(ing) => setForm((f) => ({ ...f, org_ingredient_id: ing.id, ingredient_name: ing.name, ingredient_unit: ing.unit }))} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">
-            {form.replaces_org_ingredient_id ? "Quantity (fallback / splash amount)" : "Quantity"}
-          </Label>
+          <Label className="text-xs">Quantity</Label>
           <Input className="h-8 text-xs" type="number" step="0.1" placeholder="e.g. 200"
             value={form.quantity_used}
             onChange={(e) => setForm((f) => ({ ...f, quantity_used: e.target.value }))} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">
-            Replaces base ingredient{" "}
-            <span className="text-muted-foreground font-normal">(milk-type substitution)</span>
-          </Label>
-          <ReplacePicker items={uniqueInvItems} value={form.replaces_org_ingredient_id}
-            onChange={(id) => setForm((f) => ({ ...f, replaces_org_ingredient_id: id }))} />
         </div>
         <Button size="sm" className="w-full" loading={addMutation.isPending}
           disabled={!form.ingredient_name || !form.quantity_used}
@@ -563,18 +497,17 @@ function SlotsPanel({ item, allAddons }: { item: MenuItem; allAddons: AddonItem[
 
 // ── Override Matrix Panel ─────────────────────────────────────
 
-function OverridesPanel({
-  item, allAddons, orgId,
+function OptionalsPanel({
+  item, orgId,
 }: {
   item: MenuItem;
-  allAddons: AddonItem[];
   orgId: string;
 }) {
   const qc = useQueryClient();
 
-  const { data: overrides = [], isLoading } = useQuery({
-    queryKey: ["addon-overrides", item.id],
-    queryFn:  () => menuApi.getAddonOverrides(item.id).then((r) => r.data),
+  const { data: optionals = [], isLoading } = useQuery({
+    queryKey: ["optional-fields", item.id],
+    queryFn:  () => menuApi.getOptionalFields(item.id).then((r) => r.data),
   });
 
   const { data: invItems = [] } = useQuery({
@@ -583,21 +516,13 @@ function OverridesPanel({
     enabled:  !!orgId,
   });
 
-  const { data: sizes = [] } = useQuery({
-    queryKey: ["menu-item", item.id],
-    queryFn:  () => menuApi.getMenuItem(item.id).then((r) => r.data),
-    select:   (d) => d.sizes ?? [],
-  });
-
   const [form, setForm] = useState({
-    addon_item_id:              "",
-    size_label:                 "__all__",
-    ingredient_name:            "",
-    org_ingredient_id:          null as string | null,
-    ingredient_unit:            "",
-    quantity_used:              "",
-    replaces_org_ingredient_id: null as string | null,
-    combo_addon_item_id:        null as string | null,
+    name: "",
+    ingredient_name: "",
+    org_ingredient_id: null as string | null,
+    ingredient_unit: "",
+    quantity_used: "",
+    is_active: true,
   });
 
   const uniqueInvItems = useMemo(
@@ -606,109 +531,67 @@ function OverridesPanel({
   );
 
   const upsertMutation = useMutation({
-    mutationFn: () => menuApi.upsertAddonOverride(item.id, {
-      addon_item_id:              form.addon_item_id,
-      size_label:                 form.size_label === "__all__" ? null : form.size_label,
-      ingredient_name:            form.ingredient_name,
-      org_ingredient_id:          form.org_ingredient_id,
-      ingredient_unit:            form.ingredient_unit,
-      quantity_used:              parseFloat(form.quantity_used),
-      replaces_org_ingredient_id: form.replaces_org_ingredient_id,
-      combo_addon_item_id:        form.combo_addon_item_id,
+    mutationFn: () => menuApi.upsertOptionalField(item.id, {
+      name: form.name,
+      ingredient_name: form.ingredient_name || null,
+      org_ingredient_id: form.org_ingredient_id,
+      ingredient_unit: form.ingredient_unit || null,
+      quantity_used: form.quantity_used ? parseFloat(form.quantity_used) : null,
+      is_active: form.is_active,
     }),
     onSuccess: () => {
-      toast.success("Override saved");
-      qc.invalidateQueries({ queryKey: ["addon-overrides", item.id] });
-      setForm((f) => ({
-        ...f, ingredient_name: "", org_ingredient_id: null,
-        ingredient_unit: "", quantity_used: "",
-        replaces_org_ingredient_id: null, combo_addon_item_id: null,
-      }));
+      toast.success("Optional field saved");
+      qc.invalidateQueries({ queryKey: ["optional-fields", item.id] });
+      setForm({
+        name: "", ingredient_name: "", org_ingredient_id: null,
+        ingredient_unit: "", quantity_used: "", is_active: true,
+      });
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (overrideId: string) => menuApi.deleteAddonOverride(item.id, overrideId),
+    mutationFn: (fieldId: string) => menuApi.deleteOptionalField(item.id, fieldId),
     onSuccess: () => {
-      toast.success("Override removed");
-      qc.invalidateQueries({ queryKey: ["addon-overrides", item.id] });
+      toast.success("Removed");
+      qc.invalidateQueries({ queryKey: ["optional-fields", item.id] });
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
-  // Group overrides by addon name for display
-  const grouped = useMemo(() => {
-    const map = new Map<string, AddonOverride[]>();
-    for (const o of overrides) {
-      const key = o.addon_item_name;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(o);
-    }
-    return map;
-  }, [overrides]);
-
   return (
     <div className="p-4 space-y-4">
-      {/* Info banner */}
-      <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-        <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          Overrides let you set <strong>specific ingredient quantities</strong> for an addon on this drink,
-          overriding the addon's global recipe. Use combo rules for when two addons are selected together.
-          If no override exists, the addon's global recipe is used as fallback.
+      <div className="flex gap-2 p-3 rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800">
+        <AlertCircle size={14} className="text-teal-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-teal-700 dark:text-teal-300">
+          Optional fields appear as checkboxes (e.g. "Add Whip"). They optionally deduct an ingredient from inventory if mapped.
         </p>
       </div>
 
-      {/* Existing overrides grouped by addon */}
       {isLoading ? (
-        <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-12" />)}</div>
-      ) : overrides.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-2">
-          No overrides — all addons use their global recipe on this drink
-        </p>
+        <div className="space-y-2">{[1,2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+      ) : optionals.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-2">No optional fields</p>
       ) : (
-        <div className="space-y-3">
-          {Array.from(grouped.entries()).map(([addonName, rows]) => (
-            <div key={addonName} className="rounded-lg border overflow-hidden">
-              <div className="px-3 py-2 bg-muted/40 border-b">
-                <p className="text-xs font-semibold">{addonName}</p>
-              </div>
-              {rows.map((o) => (
-                <div key={o.id}
-                  className="flex items-start gap-3 px-3 py-2 hover:bg-muted/30 group border-b last:border-0">
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium">{o.ingredient_name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {Number(o.quantity_used)} {fmtUnit(o.ingredient_unit)}
-                      </span>
-                      {o.size_label ? (
-                        <Badge variant="outline" className="text-[10px]">
-                          {SIZE_LABELS[o.size_label] ?? o.size_label}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-[10px]">All sizes</Badge>
-                      )}
-                      {o.replaces_ingredient_name && (
-                        <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
-                          replaces {o.replaces_ingredient_name}
-                        </Badge>
-                      )}
-                      {o.combo_addon_item_name && (
-                        <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-300">
-                          combo w/ {o.combo_addon_item_name}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon-sm"
-                    className="opacity-0 group-hover:opacity-100 text-destructive shrink-0"
-                    onClick={() => deleteMutation.mutate(o.id)}>
-                    <Trash2 size={13} />
-                  </Button>
+        <div className="space-y-2">
+          {optionals.map((o) => (
+            <div key={o.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 group border">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold">{o.name}</p>
+                  {!o.is_active && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
                 </div>
-              ))}
+                {o.ingredient_name && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Deducts: {o.quantity_used} {fmtUnit(o.ingredient_unit ?? "")} of {o.ingredient_name}
+                  </p>
+                )}
+              </div>
+              <Button variant="ghost" size="icon-sm"
+                className="opacity-0 group-hover:opacity-100 text-destructive shrink-0"
+                onClick={() => deleteMutation.mutate(o.id)}>
+                <Trash2 size={13} />
+              </Button>
             </div>
           ))}
         </div>
@@ -716,44 +599,17 @@ function OverridesPanel({
 
       <Separator />
 
-      {/* Add override form */}
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add Override</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add Custom Field</p>
       <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <Label className="text-xs">Addon</Label>
-            <Select value={form.addon_item_id}
-              onValueChange={(v) => setForm((f) => ({ ...f, addon_item_id: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick addon…" /></SelectTrigger>
-              <SelectContent>
-                {allAddons.filter((a) => a.is_active).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} <span className="text-muted-foreground ml-1 text-[10px]">({a.type})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Size <span className="text-muted-foreground font-normal">(blank = all)</span></Label>
-            <Select value={form.size_label}
-              onValueChange={(v) => setForm((f) => ({ ...f, size_label: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All sizes</SelectItem>
-                {sizes.map((s) => (
-                  <SelectItem key={s.id} value={s.label}>
-                    {SIZE_LABELS[s.label] ?? s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Checkbox Label</Label>
+          <Input className="h-8 text-xs" placeholder='e.g. "Add Salt"'
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1 col-span-2">
-            <Label className="text-xs">Ingredient to deduct</Label>
+        <div className="grid grid-cols-[1fr_80px] gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Inventory Item <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <IngredientPicker items={uniqueInvItems} value={form.ingredient_name}
               onSelect={(ing) => setForm((f) => ({
                 ...f, org_ingredient_id: ing.id,
@@ -761,36 +617,20 @@ function OverridesPanel({
               }))} />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Quantity</Label>
-            <Input className="h-8 text-xs" type="number" step="0.1" placeholder="e.g. 150"
+            <Label className="text-xs">Qty</Label>
+            <Input className="h-8 text-xs" type="number" step="0.1" placeholder="0"
               value={form.quantity_used}
-              onChange={(e) => setForm((f) => ({ ...f, quantity_used: e.target.value }))} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">
-              Replaces base ingredient{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
-            </Label>
-            <ReplacePicker items={uniqueInvItems} value={form.replaces_org_ingredient_id}
-              onChange={(id) => setForm((f) => ({ ...f, replaces_org_ingredient_id: id }))} />
+              onChange={(e) => setForm((f) => ({ ...f, quantity_used: e.target.value }))}
+              disabled={!form.org_ingredient_id} />
           </div>
         </div>
-
-        <div className="space-y-1">
-          <Label className="text-xs">
-            Combo rule — only fires when this other addon is also selected{" "}
-            <span className="text-muted-foreground font-normal">(optional)</span>
-          </Label>
-          <AddonPicker items={allAddons.filter((a) => a.is_active && a.id !== form.addon_item_id)}
-            value={form.combo_addon_item_id}
-            onChange={(id) => setForm((f) => ({ ...f, combo_addon_item_id: id }))}
-            placeholder="None (standalone rule)" />
+        <div className="flex items-center gap-2 pt-1">
+          <Switch checked={form.is_active} onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))} />
+          <Label className="text-xs cursor-pointer">Active</Label>
         </div>
-
-        <Button size="sm" className="w-full" loading={upsertMutation.isPending}
-          disabled={!form.addon_item_id || !form.ingredient_name || !form.quantity_used}
-          onClick={() => upsertMutation.mutate()}>
-          <Plus size={13} /> Save Override
+        <Button size="sm" className="w-full mt-2" loading={upsertMutation.isPending}
+          disabled={!form.name} onClick={() => upsertMutation.mutate()}>
+          <Plus size={13} /> Save Field
         </Button>
       </div>
     </div>
@@ -799,31 +639,31 @@ function OverridesPanel({
 
 // ── Slots & Overrides combined panel ──────────────────────────
 
-function SlotsAndOverridesPanel({
+function SlotsAndOptionalsPanel({
   item, allAddons, orgId,
 }: {
   item: MenuItem;
   allAddons: AddonItem[];
   orgId: string;
 }) {
-  const [panel, setPanel] = useState<"slots" | "overrides">("slots");
+  const [panel, setPanel] = useState<"slots" | "optionals">("slots");
   return (
     <div>
       <div className="flex border-b">
-        {(["slots", "overrides"] as const).map((p) => (
+        {(["slots", "optionals"] as const).map((p) => (
           <button key={p}
             onClick={() => setPanel(p)}
             className={`px-4 py-2.5 text-xs font-semibold transition-colors
               ${panel === p
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"}`}>
-            {p === "slots" ? "Slots" : "Overrides"}
+            {p === "slots" ? "Slots" : "Optionals"}
           </button>
         ))}
       </div>
       {panel === "slots"
         ? <SlotsPanel item={item} allAddons={allAddons} />
-        : <OverridesPanel item={item} allAddons={allAddons} orgId={orgId} />}
+        : <OptionalsPanel item={item} orgId={orgId} />}
     </div>
   );
 }
@@ -915,7 +755,7 @@ export default function Recipes() {
         <TabsList className="mb-6">
           <TabsTrigger value="drinks"><Coffee size={14} /> Drinks ({items.length})</TabsTrigger>
           <TabsTrigger value="addons"><Package size={14} /> Addons ({addons.length})</TabsTrigger>
-          <TabsTrigger value="slots"><Settings2 size={14} /> Slots & Overrides</TabsTrigger>
+          <TabsTrigger value="slots"><Settings2 size={14} /> Slots & Optionals</TabsTrigger>
         </TabsList>
 
         {/* ── Drinks ── */}
@@ -999,15 +839,15 @@ export default function Recipes() {
                   <div className="p-4 border-b bg-muted/30 flex items-center justify-between">
                     <div>
                       <p className="font-semibold">{selItemSO.name}</p>
-                      <p className="text-xs text-muted-foreground">Custom slots and per-drink overrides</p>
+                      <p className="text-xs text-muted-foreground">Custom slots and per-drink optional checkboxes</p>
                     </div>
                     <Badge variant="info">{egp(selItemSO.base_price)}</Badge>
                   </div>
-                  <SlotsAndOverridesPanel item={selItemSO} allAddons={addons} orgId={orgId} />
+                  <SlotsAndOptionalsPanel item={selItemSO} allAddons={addons} orgId={orgId} />
                 </>
               ) : (
                 <EmptyState icon={Settings2} title="Select a drink"
-                  sub="Choose a menu item to configure its slots and addon overrides"
+                  sub="Choose a menu item to configure its slots and optional fields"
                   className="h-[500px]" />
               )}
             </div>

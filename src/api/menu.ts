@@ -1,7 +1,7 @@
 import client from "@/lib/client";
 import type {
   Category, MenuItem, MenuItemFull, AddonItem,
-  ItemSize, AddonSlot, AddonOverride,
+  ItemSize, AddonSlot, MenuItemOptionalField,
 } from "@/types";
 
 // ── Categories ────────────────────────────────────────────────────────────────
@@ -85,25 +85,22 @@ export const updateAddonSlot = (
 export const deleteAddonSlot = (menuItemId: string, slotId: string) =>
   client.delete(`/menu-items/${menuItemId}/addon-slots/${slotId}`);
 
-// ── Addon overrides ───────────────────────────────────────────────────────────
-// Per-(drink, addon, size) ingredient deduction rules.
-// Replaces drink_option_ingredient_overrides.
-export const getAddonOverrides = (menuItemId: string) =>
-  client.get<AddonOverride[]>(`/menu-items/${menuItemId}/addon-overrides`);
+// ── Optional fields ───────────────────────────────────────────────────────────
+// Per-drink checkboxes (e.g., "Add Whip") with optional inventory deductions.
+export const getOptionalFields = (menuItemId: string) =>
+  client.get<MenuItemOptionalField[]>(`/menu-items/${menuItemId}/optional-fields`);
 
-export const upsertAddonOverride = (
+export const upsertOptionalField = (
   menuItemId: string,
   data: {
-    addon_item_id: string;
-    size_label: string | null;
-    ingredient_name: string;
-    org_ingredient_id: string | null;
-    ingredient_unit: string;
-    quantity_used: number;
-    replaces_org_ingredient_id?: string | null;
-    combo_addon_item_id?: string | null;
+    name: string;
+    ingredient_name?: string | null;
+    org_ingredient_id?: string | null;
+    ingredient_unit?: string | null;
+    quantity_used?: number | null;
+    is_active?: boolean;
   },
-) => client.post<AddonOverride>(`/menu-items/${menuItemId}/addon-overrides`, data);
+) => client.post<MenuItemOptionalField>(`/menu-items/${menuItemId}/optional-fields`, data);
 
-export const deleteAddonOverride = (menuItemId: string, overrideId: string) =>
-  client.delete(`/menu-items/${menuItemId}/addon-overrides/${overrideId}`);
+export const deleteOptionalField = (menuItemId: string, fieldId: string) =>
+  client.delete(`/menu-items/${menuItemId}/optional-fields/${fieldId}`);

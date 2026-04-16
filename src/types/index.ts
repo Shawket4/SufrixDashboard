@@ -136,25 +136,15 @@ export interface AddonSlot {
   created_at: string;
 }
 
-// ── Addon Overrides ───────────────────────────────────────────────────────────
-// Per-(menu_item, addon_item, size) ingredient deduction rule.
-// Replaces the old drink_option_ingredient_overrides table.
-// combo_addon_item_id: when set, rule only fires if that other addon
-// is also selected on the same order item (combo deduction).
-export interface AddonOverride {
+export interface MenuItemOptionalField {
   id: string;
   menu_item_id: string;
-  addon_item_id: string;
-  addon_item_name: string;   // joined for display
-  size_label: string | null; // null = applies to all sizes
-  ingredient_name: string;
+  name: string;
+  ingredient_name: string | null;
   org_ingredient_id: string | null;
-  ingredient_unit: string;
-  quantity_used: number;
-  replaces_org_ingredient_id: string | null;
-  replaces_ingredient_name: string | null;   // joined for display
-  combo_addon_item_id: string | null;
-  combo_addon_item_name: string | null;      // joined for display
+  ingredient_unit: string | null;
+  quantity_used: number | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -191,10 +181,10 @@ export interface DrinkRecipe {
 export interface AddonIngredient {
   id: string;
   addon_item_id: string;
+  org_ingredient_id: string | null;
   ingredient_name: string;
   unit: string;
   quantity_used: number;
-  replaces_org_ingredient_id: string | null;
 }
 
 // ── Inventory ─────────────────────────────────────────────────────────────────
@@ -205,6 +195,7 @@ export interface OrgIngredient {
   org_id: string;
   name: string;
   unit: InventoryUnit;
+  category: string;
   description: string | null;
   cost_per_unit: number;
   is_active: boolean;
@@ -282,7 +273,7 @@ export interface InventoryDeduction {
   unit: string;
   quantity: number;
   source: string;
-  replaces_org_ingredient_id: string | null;
+  category: string;
 }
 
 export interface OrderItem {
