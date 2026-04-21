@@ -191,7 +191,10 @@
     "avgTax": "متوسط الضريبة",
     "createdToast": "تم إنشاء المؤسسة",
     "updatedToast": "تم تحديث المؤسسة",
-    "deletedToast": "تم حذف المؤسسة"
+    "deletedToast": "تم حذف المؤسسة",
+    "logo": "الشعار",
+    "logoHint": "يُنصح بصورة مربعة PNG أو SVG، بحجم لا يقل عن 128×128 بكسل",
+    "logoRemoved": "تم حذف الشعار"
   },
   "branches": {
     "title": "الفروع",

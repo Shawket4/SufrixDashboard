@@ -191,7 +191,10 @@
     "avgTax": "Avg Tax",
     "createdToast": "Organization created",
     "updatedToast": "Organization updated",
-    "deletedToast": "Organization deleted"
+    "deletedToast": "Organization deleted",
+    "logo": "Logo",
+    "logoHint": "Recommended: square PNG or SVG, at least 128×128 px",
+    "logoRemoved": "Logo removed"
   },
   "branches": {
     "title": "Branches",

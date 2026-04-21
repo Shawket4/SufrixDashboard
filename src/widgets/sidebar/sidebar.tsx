@@ -35,6 +35,7 @@ import { ThemeToggle } from "@/widgets/theme-toggle/theme-toggle";
 import { LanguageToggle } from "@/widgets/language-toggle/language-toggle";
 import type { Role } from "@/shared/config/constants";
 import type { LucideIcon } from "lucide-react";
+import { useOrg } from "@/entities/org/queries";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation structure
@@ -94,7 +95,11 @@ const NAV: NavGroup[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 function BrandLogo({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const [logoFailed, setLogoFailed] = useState(false);
+  const { orgId } = useCurrentContext();
+  const { data: org } = useOrg(orgId);   // null-safe: enabled only when orgId != null
+
+  const [orgLogoFailed, setOrgLogoFailed] = useState(false);
+  const [appLogoFailed, setAppLogoFailed] = useState(false);
 
   const tile = (
     <div className="w-8 h-8 brand-gradient rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -102,9 +107,33 @@ function BrandLogo({ collapsed }: { collapsed: boolean }) {
     </div>
   );
 
-  if (collapsed) return tile;
+  const hasOrgLogo = Boolean(org?.logo_url) && !orgLogoFailed;
 
-  if (logoFailed) {
+  if (collapsed) {
+    return hasOrgLogo ? (
+      <img
+        src={org!.logo_url!}
+        alt={org!.name}
+        onError={() => setOrgLogoFailed(true)}
+        className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+        draggable={false}
+      />
+    ) : tile;
+  }
+
+  if (hasOrgLogo) {
+    return (
+      <img
+        src={org!.logo_url!}
+        alt={org!.name}
+        onError={() => setOrgLogoFailed(true)}
+        className="h-8 object-contain select-none"
+        draggable={false}
+      />
+    );
+  }
+
+  if (appLogoFailed) {
     return (
       <div className="flex items-center gap-2.5 min-w-0">
         {tile}
@@ -117,7 +146,7 @@ function BrandLogo({ collapsed }: { collapsed: boolean }) {
     <img
       src="/TheRue.png"
       alt={t("app.name")}
-      onError={() => setLogoFailed(true)}
+      onError={() => setAppLogoFailed(true)}
       className="h-8 object-contain select-none"
       draggable={false}
     />

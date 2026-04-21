@@ -11,9 +11,15 @@ import { DataTable } from "@/shared/ui/data-table";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
+import {
+  Dialog, DialogBody, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
+} from "@/shared/ui/dialog";
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+} from "@/shared/ui/form";
 import { StatCard } from "@/shared/ui/stat-card";
+import { ImageUploader } from "@/shared/ui/image-uploader";
 import { orgApi } from "@/entities/org/api";
 import { useOrgs } from "@/entities/org/queries";
 import { orgSchema, type OrgValues } from "@/entities/org/schemas";
@@ -22,9 +28,24 @@ import { getErrorMessage } from "@/shared/api/errors";
 import { exportToExcel } from "@/shared/lib/excel";
 import type { Org } from "@/shared/types";
 
-function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void; edit?: Org | null }) {
+// ── OrgDialog ────────────────────────────────────────────────────────────────
+
+function OrgDialog({
+  open,
+  onClose,
+  edit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  edit?: Org | null;
+}) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+
+  // Pending logo only used in create mode — buffered until form submit
+  const [pendingLogo, setPendingLogo] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const form = useForm<OrgValues>({
     resolver: zodResolver(orgSchema),
     defaultValues: {
@@ -36,26 +57,100 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
     },
   });
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: (v: OrgValues) => (edit ? orgApi.update(edit.id, v) : orgApi.create(v)),
+  // ── Logo mutations (edit mode — fire immediately like MenuItemDialog) ──────
+  const uploadLogo = useMutation({
+    mutationFn: (file: File) => orgApi.uploadLogo(edit!.id, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs }),
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+
+  const removeLogo = useMutation({
+    mutationFn: () => orgApi.update(edit!.id, { logo_url: null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs });
-      toast.success(edit ? t("orgs.updatedToast") : t("orgs.createdToast"));
-      onClose();
+      toast.success(t("orgs.logoRemoved"));
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
+  // ── Main submit ───────────────────────────────────────────────────────────
+  const { mutate, isPending } = useMutation({
+    mutationFn: (v: OrgValues) =>
+      edit
+        ? orgApi.update(edit.id, v)
+        : orgApi.create(v, pendingLogo ?? undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs });
+      toast.success(edit ? t("orgs.updatedToast") : t("orgs.createdToast"));
+      handleClose();
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+
+  function handleClose() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPendingLogo(null);
+    setPreviewUrl(null);
+    form.reset();
+    onClose();
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{edit ? t("orgs.editTitle") : t("orgs.newTitle")}</DialogTitle>
           <DialogDescription>{edit ? null : t("orgs.subtitle")}</DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutate(v))}>
             <DialogBody>
+
+              {/* ── Logo ───────────────────────────────────────────────── */}
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">{t("orgs.logo")}</p>
+                {edit ? (
+                  // Edit: uploads/removes fire immediately (same as menu item images)
+                  <ImageUploader
+                    value={edit.logo_url}
+                    onUpload={async (file) => {
+                      const org = await uploadLogo.mutateAsync(file);
+                      return org.logo_url ?? "";
+                    }}
+                    onRemove={
+                      edit.logo_url
+                        ? async () => { await removeLogo.mutateAsync(); }
+                        : undefined
+                    }
+                    hint={t("orgs.logoHint")}
+                  />
+                ) : (
+                  // Create: buffer locally, sent with POST
+                  <ImageUploader
+                    value={previewUrl}
+                    onUpload={async (file) => {
+                      if (previewUrl) URL.revokeObjectURL(previewUrl);
+                      const url = URL.createObjectURL(file);
+                      setPendingLogo(file);
+                      setPreviewUrl(url);
+                      return url;
+                    }}
+                    onRemove={
+                      previewUrl
+                        ? async () => {
+                            if (previewUrl) URL.revokeObjectURL(previewUrl);
+                            setPendingLogo(null);
+                            setPreviewUrl(null);
+                          }
+                        : undefined
+                    }
+                    hint={t("orgs.logoHint")}
+                  />
+                )}
+              </div>
+
+              {/* ── Name ───────────────────────────────────────────────── */}
               <FormField
                 control={form.control}
                 name="name"
@@ -68,7 +163,11 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
                         onChange={(e) => {
                           field.onChange(e);
                           if (!edit) {
-                            const s = e.target.value.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+                            const s = e.target.value
+                              .toLowerCase()
+                              .trim()
+                              .replace(/\s+/g, "-")
+                              .replace(/[^a-z0-9-]/g, "");
                             form.setValue("slug", s);
                           }
                         }}
@@ -78,6 +177,8 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
                   </FormItem>
                 )}
               />
+
+              {/* ── Slug ───────────────────────────────────────────────── */}
               <FormField
                 control={form.control}
                 name="slug"
@@ -89,6 +190,8 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
                   </FormItem>
                 )}
               />
+
+              {/* ── Currency + Tax ─────────────────────────────────────── */}
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -107,27 +210,38 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("orgs.taxRate")}</FormLabel>
-                      <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* ── Receipt footer ─────────────────────────────────────── */}
               <FormField
                 control={form.control}
                 name="receipt_footer"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("orgs.receiptFooter")}</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ""} /></FormControl>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </DialogBody>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-              <Button type="submit" loading={isPending}>{edit ? t("common.saveChanges") : t("common.create")}</Button>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" loading={isPending}>
+                {edit ? t("common.saveChanges") : t("common.create")}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
@@ -135,6 +249,8 @@ function OrgDialog({ open, onClose, edit }: { open: boolean; onClose: () => void
     </Dialog>
   );
 }
+
+// ── Orgs page (unchanged from original — only OrgDialog above was updated) ───
 
 export default function Orgs() {
   const { t } = useTranslation();
@@ -148,9 +264,17 @@ export default function Orgs() {
       header: t("common.name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 brand-gradient rounded-lg flex items-center justify-center text-white font-bold text-xs">
-            {row.original.name.slice(0, 2).toUpperCase()}
-          </div>
+          {row.original.logo_url ? (
+            <img
+              src={row.original.logo_url}
+              alt={row.original.name}
+              className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 brand-gradient rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+              {row.original.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
             <p className="font-semibold">{row.original.name}</p>
             <p className="text-xs text-muted-foreground">{row.original.slug}</p>
@@ -158,8 +282,20 @@ export default function Orgs() {
         </div>
       ),
     },
-    { accessorKey: "currency_code", header: t("orgs.currency"), cell: ({ getValue }) => <Badge variant="outline" className="font-mono">{getValue() as string}</Badge> },
-    { accessorKey: "tax_rate", header: t("orgs.taxRate"), cell: ({ getValue }) => <span className="font-mono text-sm">{getValue() as number}%</span> },
+    {
+      accessorKey: "currency_code",
+      header: t("orgs.currency"),
+      cell: ({ getValue }) => (
+        <Badge variant="outline" className="font-mono">{getValue() as string}</Badge>
+      ),
+    },
+    {
+      accessorKey: "tax_rate",
+      header: t("orgs.taxRate"),
+      cell: ({ getValue }) => (
+        <span className="font-mono text-sm">{getValue() as number}%</span>
+      ),
+    },
     {
       accessorKey: "is_active",
       header: t("common.status"),
@@ -199,7 +335,11 @@ export default function Orgs() {
     <PageShell
       title={t("orgs.title")}
       description={t("orgs.subtitle")}
-      action={<Button onClick={() => { setEditOrg(null); setDialogOpen(true); }}><Plus /> {t("common.new")}</Button>}
+      action={
+        <Button onClick={() => { setEditOrg(null); setDialogOpen(true); }}>
+          <Plus /> {t("common.new")}
+        </Button>
+      }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label={t("common.total")} value={orgs.length} loading={isLoading} />
