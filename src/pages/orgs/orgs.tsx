@@ -23,6 +23,7 @@ import { ImageUploader } from "@/shared/ui/image-uploader";
 import { orgApi } from "@/entities/org/api";
 import { useOrgs } from "@/entities/org/queries";
 import { orgSchema, type OrgValues } from "@/entities/org/schemas";
+import { useAppStore } from "@/shared/auth/app-store";
 import { QUERY_KEYS } from "@/shared/config/constants";
 import { getErrorMessage } from "@/shared/api/errors";
 import { exportToExcel } from "@/shared/lib/excel";
@@ -41,6 +42,8 @@ function OrgDialog({
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const selectedOrgId = useAppStore((s) => s.selectedOrgId);
+  const setSelectedOrg = useAppStore((s) => s.setSelectedOrg);
 
   // Pending logo only used in create mode — buffered until form submit
   const [pendingLogo, setPendingLogo] = useState<File | null>(null);
@@ -60,7 +63,10 @@ function OrgDialog({
   // ── Logo mutations (edit mode — fire immediately like MenuItemDialog) ──────
   const uploadLogo = useMutation({
     mutationFn: (file: File) => orgApi.uploadLogo(edit!.id, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs }),
+    onSuccess: (org) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs });
+      if (org.id === selectedOrgId) setSelectedOrg(org.id, org.logo_url);
+    },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
@@ -68,6 +74,7 @@ function OrgDialog({
     mutationFn: () => orgApi.update(edit!.id, { logo_url: null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.orgs });
+      if (edit!.id === selectedOrgId) setSelectedOrg(edit!.id, null);
       toast.success(t("orgs.logoRemoved"));
     },
     onError: (e) => toast.error(getErrorMessage(e)),

@@ -8,10 +8,11 @@ type Language = "en" | "ar";
 
 interface AppState {
   selectedOrgId: string | null;
+  selectedOrgLogo: string | null;
   selectedBranchId: string | null;
   language: Language;
   sidebarCollapsed: boolean;
-  setSelectedOrg: (id: string | null) => void;
+  setSelectedOrg: (id: string | null, logoUrl?: string | null) => void;
   setSelectedBranch: (id: string | null) => void;
   setLanguage: (lang: Language) => void;
   toggleSidebar: () => void;
@@ -22,12 +23,13 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       selectedOrgId: null,
+      selectedOrgLogo: null,
       selectedBranchId: null,
       language: "en",
       sidebarCollapsed: false,
-      setSelectedOrg: (id) => {
+      setSelectedOrg: (id, logoUrl) => {
         apiContext.setOrg(id);
-        set({ selectedOrgId: id });
+        set({ selectedOrgId: id, selectedOrgLogo: logoUrl ?? null });
       },
       setSelectedBranch: (id) => {
         apiContext.setBranch(id);
@@ -45,6 +47,7 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         selectedOrgId: s.selectedOrgId,
+        selectedOrgLogo: s.selectedOrgLogo,
         selectedBranchId: s.selectedBranchId,
         language: s.language,
         sidebarCollapsed: s.sidebarCollapsed,

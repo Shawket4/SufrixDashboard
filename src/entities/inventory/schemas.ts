@@ -6,7 +6,7 @@ export const catalogSchema = z.object({
   unit: z.enum(INVENTORY_UNITS),
   category: z.string().trim().default("general"),
   description: z.string().trim().nullish().or(z.literal("")),
-  cost_per_unit: z.coerce.number().int().min(0).default(0),
+  cost_per_unit: z.coerce.number().min(0).default(0),
   is_active: z.boolean().default(true),
 });
 export type CatalogValues = z.infer<typeof catalogSchema>;

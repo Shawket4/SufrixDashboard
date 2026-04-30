@@ -15,6 +15,8 @@ export interface CurrentContext {
    *   - org_admin/branch_manager/teller: always their own org_id
    */
   orgId: string | null;
+  /** The persisted logo URL of the active organization. */
+  orgLogo: string | null;
   /**
    * The "active" branch ID:
    *   - super_admin/org_admin: whatever they picked in the branch switcher (can be null = all/none)
@@ -39,6 +41,7 @@ export interface CurrentContext {
 export const useCurrentContext = (): CurrentContext => {
   const user = useAuthStore((s) => s.user);
   const selectedOrgId = useAppStore((s) => s.selectedOrgId);
+  const selectedOrgLogo = useAppStore((s) => s.selectedOrgLogo);
   const selectedBranchId = useAppStore((s) => s.selectedBranchId);
 
   return useMemo<CurrentContext>(() => {
@@ -60,6 +63,7 @@ export const useCurrentContext = (): CurrentContext => {
       user,
       role,
       orgId,
+      orgLogo: selectedOrgLogo,
       branchId,
       isReady: Boolean(user) && (isSuperAdmin || Boolean(orgId)),
       isSuperAdmin,

@@ -149,7 +149,7 @@ function CatalogTab({ orgId }: { orgId: string }) {
             { key: "name", header: t("common.name"), accessor: (i: OrgIngredient) => i.name, width: 28 },
             { key: "unit", header: "Unit", accessor: (i: OrgIngredient) => fmtUnit(i.unit), width: 10 },
             { key: "category", header: t("common.category"), accessor: (i: OrgIngredient) => i.category, width: 16 },
-            { key: "cost", header: "Cost/unit (pt)", accessor: (i: OrgIngredient) => i.cost_per_unit, type: "integer", width: 14 },
+            { key: "cost", header: "Cost/unit (pt)", accessor: (i: OrgIngredient) => i.cost_per_unit, type: "number", width: 14 },
             { key: "is_active", header: t("common.status"), accessor: (i: OrgIngredient) => i.is_active, type: "bool", width: 12 },
           ],
           rows: items,
@@ -210,7 +210,7 @@ function CatalogTab({ orgId }: { orgId: string }) {
                   )} />
                 </div>
                 <FormField control={form.control} name="cost_per_unit" render={({ field }) => (
-                  <FormItem><FormLabel>{t("inventory.catalog.costPerUnit")}</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>{t("inventory.catalog.costPerUnit")}</FormLabel><FormControl><Input type="number" step="any" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem><FormLabel>{t("common.description")}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -95,8 +95,16 @@ const NAV: NavGroup[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 function BrandLogo({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const { orgId } = useCurrentContext();
+  const { orgId, orgLogo } = useCurrentContext();
   const { data: org } = useOrg(orgId);   // null-safe: enabled only when orgId != null
+  const setSelectedOrg = useAppStore((s) => s.setSelectedOrg);
+
+  // Sync background query result with persistent store
+  useEffect(() => {
+    if (org?.id === orgId && org.logo_url !== orgLogo) {
+      setSelectedOrg(orgId, org.logo_url);
+    }
+  }, [org?.id, org?.logo_url, orgId, orgLogo, setSelectedOrg]);
 
   const [orgLogoFailed, setOrgLogoFailed] = useState(false);
   const [appLogoFailed, setAppLogoFailed] = useState(false);
@@ -107,13 +115,14 @@ function BrandLogo({ collapsed }: { collapsed: boolean }) {
     </div>
   );
 
-  const hasOrgLogo = Boolean(org?.logo_url) && !orgLogoFailed;
+  const hasOrgLogo = Boolean(orgLogo || org?.logo_url) && !orgLogoFailed;
+  const currentLogoUrl = orgLogo || org?.logo_url;
 
   if (collapsed) {
     return hasOrgLogo ? (
       <img
-        src={org!.logo_url!}
-        alt={org!.name}
+        src={currentLogoUrl!}
+        alt={org?.name ?? ""}
         onError={() => setOrgLogoFailed(true)}
         className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
         draggable={false}
@@ -124,10 +133,10 @@ function BrandLogo({ collapsed }: { collapsed: boolean }) {
   if (hasOrgLogo) {
     return (
       <img
-        src={org!.logo_url!}
-        alt={org!.name}
+        src={currentLogoUrl!}
+        alt={org?.name ?? ""}
         onError={() => setOrgLogoFailed(true)}
-        className="h-8 object-contain select-none"
+        className="h-10 px-2 object-contain select-none"
         draggable={false}
       />
     );
@@ -147,7 +156,7 @@ function BrandLogo({ collapsed }: { collapsed: boolean }) {
       src="/TheRue.png"
       alt={t("app.name")}
       onError={() => setAppLogoFailed(true)}
-      className="h-8 object-contain select-none"
+      className="h-8 px-2 object-contain select-none"
       draggable={false}
     />
   );
