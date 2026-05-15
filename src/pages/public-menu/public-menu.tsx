@@ -634,7 +634,7 @@ function ItemDetailDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         className="p-0 gap-0 sm:max-w-2xl max-h-[92vh] overflow-hidden rounded-[2rem] border-0 shadow-2xl flex flex-col"
-        // Hide default close so we can place our own
+        showClose={false}
       >
         <DialogTitle className="sr-only">{item.name}</DialogTitle>
 
@@ -898,7 +898,10 @@ function CartDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-[2rem] overflow-hidden border-0 flex flex-col">
+      <DialogContent 
+        className="p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-[2rem] overflow-hidden border-0 flex flex-col"
+        showClose={false}
+      >
         <DialogTitle className="sr-only">Your Order</DialogTitle>
 
         <header className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
