@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentType,
   type MouseEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,12 +14,20 @@ import {
   Check,
   ChevronRight,
   Coffee,
+  Cookie,
+  Droplet,
+  GlassWater,
+  IceCream,
   ImageOff,
+  Leaf,
   Minus,
   Plus,
+  Sandwich,
   ShoppingBag,
+  Snowflake,
   Trash2,
   X,
+  type LucideProps,
 } from "lucide-react";
 
 import { usePublicMenu } from "@/entities/menu/queries";
@@ -61,6 +70,16 @@ type CartLine = {
   quantity: number;
 };
 
+type ThumbVariant = "thumb" | "card" | "hero";
+
+type CatStyle = {
+  icon: ComponentType<LucideProps>;
+  bgTop: string;
+  bgBottom: string;
+  iconColor: string;
+  accent: string;
+};
+
 /* ---------------------------------------------------------------------------
  * Helpers
  * ------------------------------------------------------------------------- */
@@ -80,25 +99,313 @@ const uid = () =>
 const cx = (...c: Array<string | false | null | undefined>) =>
   c.filter(Boolean).join(" ");
 
+/** Build an elegant monogram from the item name (first 2 word-initials, or first 2 chars). */
+const getMonogram = (name: string): string => {
+  const cleaned = (name ?? "").trim();
+  if (!cleaned) return "·";
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  const w = words[0];
+  return w.substring(0, Math.min(w.length, 2)).toUpperCase();
+};
+
+/** Apply an alpha to a 6-digit hex colour, returning an rgba() string. */
+const hexAlpha = (hex: string, alpha: number): string => {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+/**
+ * Mirrors the Flutter `CatStyle.of(name)` map exactly — same keyword order,
+ * same palettes — so web and Flutter mockups stay visually identical.
+ */
+const getCatStyle = (name: string): CatStyle => {
+  const n = (name ?? "").toLowerCase();
+
+  if (n.includes("matcha"))
+    return {
+      icon: Leaf,
+      bgTop: "#E8F5E9",
+      bgBottom: "#C8E6C9",
+      iconColor: "#2E7D32",
+      accent: "#388E3C",
+    };
+
+  if (
+    n.includes("latte") ||
+    n.includes("espresso") ||
+    n.includes("americano") ||
+    n.includes("cappuc") ||
+    n.includes("flat") ||
+    n.includes("cortado") ||
+    n.includes("coffee") ||
+    n.includes("v60") ||
+    n.includes("blended") ||
+    n.includes("cold brew")
+  )
+    return {
+      icon: Coffee,
+      bgTop: "#F5EEE6",
+      bgBottom: "#EDD9C0",
+      iconColor: "#5D4037",
+      accent: "#795548",
+    };
+
+  if (n.includes("chocolate") || n.includes("mocha"))
+    return {
+      icon: Coffee,
+      bgTop: "#F3E5E5",
+      bgBottom: "#E8CECE",
+      iconColor: "#6D4C41",
+      accent: "#8D3A3A",
+    };
+
+  if (
+    n.includes("croissant") ||
+    n.includes("brownie") ||
+    n.includes("cookie") ||
+    n.includes("pastry") ||
+    n.includes("pastries") ||
+    n.includes("cake") ||
+    n.includes("waffle")
+  )
+    return {
+      icon: Cookie,
+      bgTop: "#FFF8E8",
+      bgBottom: "#FFF0C8",
+      iconColor: "#E65100",
+      accent: "#F57C00",
+    };
+
+  if (
+    n.includes("sandwich") ||
+    n.includes("chicken") ||
+    n.includes("turkey") ||
+    n.includes("food")
+  )
+    return {
+      icon: Sandwich,
+      bgTop: "#FFF3E0",
+      bgBottom: "#FFE0B2",
+      iconColor: "#E64A19",
+      accent: "#EF6C00",
+    };
+
+  if (n.includes("affogato") || n.includes("ice cream"))
+    return {
+      icon: IceCream,
+      bgTop: "#F3E5F5",
+      bgBottom: "#E1BEE7",
+      iconColor: "#7B1FA2",
+      accent: "#9C27B0",
+    };
+
+  if (
+    n.includes("lemon") ||
+    n.includes("lemonade") ||
+    n.includes("refresher") ||
+    n.includes("juice")
+  )
+    return {
+      icon: GlassWater,
+      bgTop: "#FFFDE7",
+      bgBottom: "#FFF9C4",
+      iconColor: "#F57F17",
+      accent: "#FBC02D",
+    };
+
+  if (n.includes("tea") || n.includes("chai"))
+    return {
+      icon: Leaf,
+      bgTop: "#E8F5E9",
+      bgBottom: "#C8E6C9",
+      iconColor: "#388E3C",
+      accent: "#43A047",
+    };
+
+  if (n.includes("water") || n.includes("sparkling"))
+    return {
+      icon: Droplet,
+      bgTop: "#E3F2FD",
+      bgBottom: "#BBDEFB",
+      iconColor: "#1565C0",
+      accent: "#1976D2",
+    };
+
+  if (n.includes("iced"))
+    return {
+      icon: Snowflake,
+      bgTop: "#E3F2FD",
+      bgBottom: "#BBDEFB",
+      iconColor: "#0277BD",
+      accent: "#0288D1",
+    };
+
+  return {
+    icon: Coffee,
+    bgTop: "#F5EEE6",
+    bgBottom: "#EDD9C0",
+    iconColor: "#795548",
+    accent: "#8D6E63",
+  };
+};
+
 /* ---------------------------------------------------------------------------
- * Image with graceful fallback
+ * Missing-image mockup — typographic monogram on warm gradient, with a
+ * category-coloured ring + tiny icon badge. Three variants for thumb / card /
+ * hero sizes.
+ * ------------------------------------------------------------------------- */
+
+function MissingItemThumb({
+  name,
+  className,
+  variant = "card",
+}: {
+  name: string;
+  className?: string;
+  variant?: ThumbVariant;
+}) {
+  const style = useMemo(() => getCatStyle(name), [name]);
+  const monogram = useMemo(() => getMonogram(name), [name]);
+  const Icon = style.icon;
+
+  const monoSize =
+    variant === "hero"
+      ? "text-6xl sm:text-8xl"
+      : variant === "card"
+      ? "text-4xl sm:text-5xl"
+      : "text-lg";
+
+  return (
+    <div
+      className={cx("relative overflow-hidden", className)}
+      style={{
+        backgroundImage: `linear-gradient(135deg, ${style.bgTop} 0%, ${style.bgBottom} 100%)`,
+      }}
+      aria-hidden
+    >
+      {/* Soft grain — adds organic, food-photography-like texture */}
+      <div
+        className="absolute inset-0 opacity-[0.045] mix-blend-multiply pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.6) 1px, transparent 0)",
+          backgroundSize: "3px 3px",
+        }}
+      />
+
+      {/* Primary decorative ring, bottom-right */}
+      {variant !== "thumb" && (
+        <div
+          className={cx(
+            "absolute rounded-full pointer-events-none",
+            variant === "hero"
+              ? "-right-16 -bottom-16 w-64 h-64 border-[4px]"
+              : "-right-9 -bottom-9 w-32 h-32 border-[3px]"
+          )}
+          style={{ borderColor: hexAlpha(style.accent, 0.16) }}
+        />
+      )}
+
+      {/* Secondary ring for hero only — adds depth */}
+      {variant === "hero" && (
+        <div
+          className="absolute -left-24 -top-24 w-72 h-72 rounded-full border-2 pointer-events-none"
+          style={{ borderColor: hexAlpha(style.accent, 0.1) }}
+        />
+      )}
+
+      {/* Hairline accent line for hero — editorial detail */}
+      {variant === "hero" && (
+        <div
+          className="absolute bottom-6 left-6 right-6 h-px pointer-events-none"
+          style={{
+            background: `linear-gradient(to right, ${hexAlpha(
+              style.accent,
+              0.25
+            )}, transparent)`,
+          }}
+        />
+      )}
+
+      {/* Monogram */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className={cx(
+            "font-extralight leading-none select-none",
+            monoSize,
+            variant === "thumb" ? "tracking-wider" : "tracking-[0.15em]"
+          )}
+          style={{ color: hexAlpha(style.accent, 0.6) }}
+        >
+          {monogram}
+        </span>
+      </div>
+
+      {/* Category icon badge */}
+      {variant !== "thumb" && (
+        <div
+          className={cx(
+            "absolute rounded-full bg-white/85 flex items-center justify-center backdrop-blur-sm shadow-sm",
+            variant === "hero"
+              ? "top-4 left-4 h-10 w-10"
+              : "top-2 left-2 h-6 w-6"
+          )}
+        >
+          <Icon
+            size={variant === "hero" ? 18 : 11}
+            strokeWidth={1.8}
+            style={{ color: hexAlpha(style.accent, 0.8) }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Image with graceful fallback. When `fallbackName` is provided and the image
+ * is missing or fails, we render the typographic mockup; otherwise the neutral
+ * grey placeholder (used for brand logos etc.).
  * ------------------------------------------------------------------------- */
 
 function ItemImage({
   src,
   alt,
   className,
+  fallbackName,
+  fallbackVariant = "card",
   iconSize = 28,
 }: {
   src?: string | null;
   alt: string;
   className?: string;
+  fallbackName?: string;
+  fallbackVariant?: ThumbVariant;
   iconSize?: number;
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  // Reset state when src changes
+  useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
+  }, [src]);
+
   if (!src || failed) {
+    if (fallbackName) {
+      return (
+        <MissingItemThumb
+          name={fallbackName}
+          variant={fallbackVariant}
+          className={className}
+        />
+      );
+    }
     return (
       <div
         className={cx(
@@ -154,14 +461,12 @@ export default function PublicMenuPage() {
         if (ignoreObserver.current) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top
-          );
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible.length > 0) {
           setActiveCat(visible[0].target.id.replace(/^cat-/, ""));
         }
       },
-      { rootMargin: "-160px 0px -55% 0px", threshold: 0 }
+      { rootMargin: "-140px 0px -55% 0px", threshold: 0 }
     );
     menu.categories.forEach((cat) => {
       const el = sectionRefs.current[String(cat.id)];
@@ -228,16 +533,19 @@ export default function PublicMenuPage() {
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-4 space-y-8 animate-in fade-in duration-500">
-        <div className="flex items-center gap-4 mt-8">
-          <Skeleton className="h-16 w-16 rounded-2xl" />
+        <div className="flex items-center gap-4 mt-6">
+          <Skeleton className="h-14 w-14 rounded-2xl" />
           <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-3 w-28" />
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-10 w-24 rounded-full flex-shrink-0" />
+            <Skeleton
+              key={i}
+              className="h-10 w-24 rounded-full flex-shrink-0"
+            />
           ))}
         </div>
         <div className="space-y-12">
@@ -285,11 +593,11 @@ export default function PublicMenuPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] selection:bg-primary/20 antialiased">
       {/* ====== Header ====== */}
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200/50">
-        <div className="max-w-4xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-white/75 backdrop-blur-xl border-b border-slate-200/60">
+        <div className="max-w-4xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             {menu.logo_url ? (
-              <div className="h-12 w-12 rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+              <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0">
                 <ItemImage
                   src={menu.logo_url}
                   alt={menu.org_name}
@@ -298,15 +606,15 @@ export default function PublicMenuPage() {
                 />
               </div>
             ) : (
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                <Coffee size={24} />
+              <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 flex-shrink-0">
+                <Coffee size={22} />
               </div>
             )}
-            <div>
-              <h1 className="text-lg font-black tracking-tight text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-tight truncate">
                 {menu.org_name}
               </h1>
-              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-slate-400 font-bold">
                 Online Menu
               </p>
             </div>
@@ -315,7 +623,7 @@ export default function PublicMenuPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-2xl bg-slate-100/50 relative"
+            className="rounded-2xl bg-slate-100/60 relative h-11 w-11 flex-shrink-0"
             onClick={() => setCartOpen(true)}
             aria-label="Open cart"
           >
@@ -329,11 +637,11 @@ export default function PublicMenuPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 pt-6 pb-40 space-y-12">
+      <main className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 pb-40 space-y-8 sm:space-y-12">
         {/* ====== Category pills ====== */}
         <nav
           aria-label="Menu categories"
-          className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide sticky top-[80px] z-20 py-2 -mx-4 px-4 bg-[#F8FAFC]/85 backdrop-blur-md"
+          className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide sticky top-16 sm:top-20 z-20 py-2 -mx-4 px-4 bg-[#F8FAFC]/90 backdrop-blur-md"
         >
           {menu.categories.map((cat) => {
             const id = String(cat.id);
@@ -347,7 +655,7 @@ export default function PublicMenuPage() {
                 }}
                 onClick={(e) => handlePillClick(e, id)}
                 className={cx(
-                  "whitespace-nowrap px-6 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 active:scale-95 flex items-center gap-2 border shadow-sm",
+                  "whitespace-nowrap px-5 sm:px-6 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 active:scale-95 flex items-center gap-2 border shadow-sm",
                   isActive
                     ? "bg-slate-900 border-slate-900 text-white shadow-slate-900/20"
                     : "bg-white border-slate-200 text-slate-600 hover:border-primary/30 hover:text-primary"
@@ -360,7 +668,7 @@ export default function PublicMenuPage() {
         </nav>
 
         {/* ====== Sections ====== */}
-        <div className="space-y-20">
+        <div className="space-y-14 sm:space-y-20">
           {menu.categories.map((cat) => {
             const id = String(cat.id);
             return (
@@ -370,20 +678,20 @@ export default function PublicMenuPage() {
                 ref={(el) => {
                   sectionRefs.current[id] = el;
                 }}
-                className="scroll-mt-40 space-y-8"
+                className="scroll-mt-36 sm:scroll-mt-40 space-y-6 sm:space-y-8"
                 aria-labelledby={`cat-heading-${id}`}
               >
                 <div className="flex items-center gap-4">
                   <h2
                     id={`cat-heading-${id}`}
-                    className="text-3xl font-black text-slate-900 tracking-tighter"
+                    className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter"
                   >
                     {cat.name}
                   </h2>
                   <div className="h-[2px] flex-1 bg-gradient-to-r from-slate-200 to-transparent rounded-full" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {cat.items.map((item: PublicMenuItem, idx) => (
                     <MenuItemCard
                       key={String(item.id)}
@@ -404,25 +712,26 @@ export default function PublicMenuPage() {
         <div
           className="fixed left-4 right-4 max-w-lg mx-auto z-40 animate-in slide-in-from-bottom-8 fade-in duration-500"
           style={{
-            bottom: "max(env(safe-area-inset-bottom, 0px), 1.5rem)",
+            bottom: "max(env(safe-area-inset-bottom, 0px), 1rem)",
           }}
         >
           <button
             onClick={() => setCartOpen(true)}
-            className="w-full h-20 bg-slate-900 text-white rounded-[2rem] font-bold flex items-center justify-between pl-7 pr-3 shadow-2xl shadow-slate-900/30 hover:bg-slate-800 transition-all active:scale-[0.98] group overflow-hidden border border-white/10"
+            className="w-full h-[68px] sm:h-20 bg-slate-900 text-white rounded-[1.75rem] sm:rounded-[2rem] font-bold flex items-center justify-between pl-5 pr-2 sm:pl-7 sm:pr-3 shadow-2xl shadow-slate-900/30 hover:bg-slate-800 transition-all active:scale-[0.98] group overflow-hidden border border-white/10"
           >
-            <div className="flex flex-col items-start relative z-10">
+            <div className="flex flex-col items-start relative z-10 min-w-0">
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
                 Your Order
               </span>
-              <span className="text-lg tracking-tight font-black">
+              <span className="text-base sm:text-lg tracking-tight font-black">
                 {cartCount} {cartCount === 1 ? "item" : "items"}
               </span>
             </div>
-            <div className="h-14 px-6 bg-primary rounded-2xl flex items-center gap-3 text-white font-black text-sm tracking-tight shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform relative z-10">
-              <span>View Order</span>
-              <span className="opacity-70">•</span>
-              <span>{fmtMoney(cartTotal)}</span>
+            <div className="h-12 sm:h-14 px-4 sm:px-6 bg-primary rounded-2xl flex items-center gap-2 sm:gap-3 text-white font-black text-sm tracking-tight shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform relative z-10 flex-shrink-0">
+              <span className="hidden sm:inline">View Order</span>
+              <span className="sm:hidden">View</span>
+              <span className="opacity-60">•</span>
+              <span className="tabular-nums">{fmtMoney(cartTotal)}</span>
             </div>
             <div className="absolute inset-y-0 -left-1/3 w-1/2 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-0 group-hover:translate-x-[400%] transition-transform duration-1000 ease-out pointer-events-none" />
           </button>
@@ -453,7 +762,7 @@ export default function PublicMenuPage() {
 }
 
 /* ---------------------------------------------------------------------------
- * Item card
+ * Item card — refined mobile layout, mockup fallback when no image.
  * ------------------------------------------------------------------------- */
 
 function MenuItemCard({
@@ -470,51 +779,54 @@ function MenuItemCard({
       type="button"
       onClick={onClick}
       style={{ animationDelay: `${delayMs}ms`, animationFillMode: "backwards" }}
-      className="group text-left bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-500 cursor-pointer relative overflow-hidden flex gap-5 animate-in fade-in slide-in-from-bottom-2 duration-500"
+      className="group text-left bg-white rounded-[1.75rem] sm:rounded-[2rem] p-4 sm:p-5 border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-500 cursor-pointer relative overflow-hidden flex gap-4 sm:gap-5 animate-in fade-in slide-in-from-bottom-2 duration-500"
     >
-      <div className="flex-1 flex flex-col justify-between py-1 min-w-0">
-        <div className="space-y-2">
-          <h3 className="font-bold text-xl text-slate-900 group-hover:text-primary transition-colors line-clamp-1 tracking-tight">
+      <div className="flex-1 flex flex-col justify-between py-0.5 sm:py-1 min-w-0">
+        <div className="space-y-1.5 sm:space-y-2">
+          <h3 className="font-bold text-lg sm:text-xl text-slate-900 group-hover:text-primary transition-colors line-clamp-1 tracking-tight">
             {item.name}
           </h3>
           {item.description && (
-            <p className="text-sm text-slate-400 font-medium line-clamp-2 leading-relaxed min-h-[2.5rem]">
+            <p className="text-[13px] sm:text-sm text-slate-400 font-medium line-clamp-2 leading-relaxed min-h-[2.25rem] sm:min-h-[2.5rem]">
               {item.description}
             </p>
           )}
         </div>
 
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-3 sm:mt-4">
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-wider">
               {item.sizes && item.sizes.length > 1 ? "Starts at" : "Price"}
             </span>
-            <span className="text-xl font-black text-primary leading-none mt-0.5">
+            <span className="text-lg sm:text-xl font-black text-primary leading-none mt-0.5 tabular-nums">
               {fmtMoney(item.base_price)}
             </span>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/20">
-            <ChevronRight size={22} strokeWidth={3} />
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/20">
+            <ChevronRight size={20} strokeWidth={3} />
           </div>
         </div>
       </div>
 
-      {item.image_url && (
-        <div className="relative flex-shrink-0">
-          <ItemImage
-            src={item.image_url}
-            alt={item.name}
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-[1.75rem] shadow-xl shadow-slate-200/60 bg-slate-50 group-hover:rotate-2 group-hover:scale-[1.03] transition-transform duration-500"
-          />
-          <div className="absolute inset-0 rounded-[1.75rem] bg-gradient-to-tr from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-        </div>
-      )}
+      {/* Visual area — real image, or typographic mockup */}
+      <div className="relative flex-shrink-0">
+        <ItemImage
+          src={item.image_url}
+          alt={item.name}
+          fallbackName={item.name}
+          fallbackVariant="card"
+          className="w-24 h-24 sm:w-32 sm:h-32 rounded-[1.5rem] sm:rounded-[1.75rem] shadow-xl shadow-slate-200/60 bg-slate-50 group-hover:rotate-2 group-hover:scale-[1.03] transition-transform duration-500"
+        />
+        {item.image_url && (
+          <div className="absolute inset-0 rounded-[1.5rem] sm:rounded-[1.75rem] bg-gradient-to-tr from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        )}
+      </div>
     </button>
   );
 }
 
 /* ---------------------------------------------------------------------------
- * Item detail dialog — sizes + addon slots + qty stepper
+ * Item detail dialog — sizes + addon slots + qty stepper.
  * ------------------------------------------------------------------------- */
 
 function ItemDetailDialog({
@@ -566,7 +878,6 @@ function ItemDetailDialog({
 
   const unitPrice = sizePrice + addonsCost;
 
-  // Validation: every slot satisfies min_selections
   const invalidSlots = useMemo(() => {
     if (!item?.addon_slots) return [] as PublicAddonSlot[];
     return item.addon_slots.filter((slot) => {
@@ -592,7 +903,6 @@ function ItemDetailDialog({
       } else if (current.size < max) {
         current.add(addonId);
       } else {
-        // at cap; ignore
         return prev;
       }
       next.set(slot.id, current);
@@ -633,38 +943,42 @@ function ItemDetailDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 sm:max-w-2xl max-h-[92vh] overflow-hidden rounded-[2rem] border-0 shadow-2xl flex flex-col"
+        className="p-0 gap-0 sm:max-w-2xl max-h-[94vh] sm:max-h-[92vh] overflow-hidden rounded-t-[2rem] sm:rounded-[2rem] border-0 shadow-2xl flex flex-col"
         showClose={false}
       >
         <DialogTitle className="sr-only">{item.name}</DialogTitle>
 
-        {/* Image header */}
+        {/* Image header — real photo or typographic hero mockup */}
         <div className="relative">
           <ItemImage
             src={item.image_url}
             alt={item.name}
-            className="w-full h-56 sm:h-72 bg-slate-100"
+            fallbackName={item.name}
+            fallbackVariant="hero"
+            className="w-full h-48 sm:h-72 bg-slate-100"
             iconSize={48}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent pointer-events-none" />
+          {item.image_url && (
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent pointer-events-none" />
+          )}
 
           <button
             onClick={onClose}
             aria-label="Close"
-            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md hover:bg-white active:scale-95 transition"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 h-10 w-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md hover:bg-white active:scale-95 transition"
           >
             <X size={20} className="text-slate-800" />
           </button>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6 space-y-7">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight text-slate-900">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 pt-3 pb-6 space-y-6 sm:space-y-7">
+          <div className="space-y-1.5 sm:space-y-2">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               {item.name}
             </h2>
             {item.description && (
-              <p className="text-sm text-slate-500 leading-relaxed">
+              <p className="text-[13px] sm:text-sm text-slate-500 leading-relaxed">
                 {item.description}
               </p>
             )}
@@ -683,7 +997,7 @@ function ItemDetailDialog({
                       type="button"
                       onClick={() => setSizeId(s.id)}
                       className={cx(
-                        "rounded-2xl border-2 px-4 py-3 text-left transition-all active:scale-[0.98]",
+                        "rounded-2xl border-2 px-4 py-3 text-left transition-all active:scale-[0.98] min-h-[60px]",
                         active
                           ? "border-primary bg-primary/5 shadow-sm"
                           : "border-slate-200 bg-white hover:border-slate-300"
@@ -699,7 +1013,7 @@ function ItemDetailDialog({
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-bold text-slate-500 mt-1 block">
+                      <span className="text-xs font-bold text-slate-500 mt-1 block tabular-nums">
                         {fmtMoney(price)}
                       </span>
                     </button>
@@ -744,7 +1058,7 @@ function ItemDetailDialog({
                         disabled={disabled}
                         onClick={() => toggleAddon(slot, a.id)}
                         className={cx(
-                          "w-full flex items-center justify-between gap-4 px-4 py-3 rounded-2xl border-2 transition-all active:scale-[0.99]",
+                          "w-full flex items-center justify-between gap-4 px-4 py-3 rounded-2xl border-2 transition-all active:scale-[0.99] min-h-[56px]",
                           checked
                             ? "border-primary bg-primary/5"
                             : "border-slate-200 bg-white hover:border-slate-300",
@@ -775,7 +1089,7 @@ function ItemDetailDialog({
                           </span>
                         </div>
                         {price > 0 && (
-                          <span className="text-xs font-black text-slate-500">
+                          <span className="text-xs font-black text-slate-500 tabular-nums">
                             +{fmtMoney(price)}
                           </span>
                         )}
@@ -816,27 +1130,27 @@ function ItemDetailDialog({
 
         {/* Sticky footer */}
         <div
-          className="border-t border-slate-100 bg-white px-5 py-4"
+          className="border-t border-slate-100 bg-white px-4 sm:px-5 py-3 sm:py-4"
           style={{
-            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 1rem)",
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.75rem)",
           }}
         >
           <button
             onClick={handleAdd}
             disabled={!canAdd}
             className={cx(
-              "w-full h-16 rounded-[1.5rem] flex items-center justify-between px-6 font-black text-base transition-all active:scale-[0.98]",
+              "w-full h-14 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] flex items-center justify-between px-5 sm:px-6 font-black text-sm sm:text-base transition-all active:scale-[0.98]",
               canAdd
                 ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             )}
           >
-            <span className="tracking-tight">
+            <span className="tracking-tight truncate">
               {canAdd
                 ? `Add ${qty} to Order`
                 : `Choose ${invalidSlots[0]?.label ?? "options"}`}
             </span>
-            <span className="tracking-tight">
+            <span className="tracking-tight tabular-nums ml-3 flex-shrink-0">
               {fmtMoney(unitPrice * qty)}
             </span>
           </button>
@@ -869,7 +1183,9 @@ function Section({
           )}
         </h3>
         {subtitle && (
-          <span className="text-[11px] text-slate-400 font-bold">{subtitle}</span>
+          <span className="text-[11px] text-slate-400 font-bold">
+            {subtitle}
+          </span>
         )}
       </div>
       {children}
@@ -898,18 +1214,18 @@ function CartDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent 
-        className="p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-[2rem] overflow-hidden border-0 flex flex-col"
+      <DialogContent
+        className="p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border-0 flex flex-col"
         showClose={false}
       >
         <DialogTitle className="sr-only">Your Order</DialogTitle>
 
-        <header className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+        <header className="px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-900">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               Your Order
             </h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">
               {cart.length} {cart.length === 1 ? "line" : "lines"}
             </p>
           </div>
@@ -922,7 +1238,7 @@ function CartDialog({
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4">
           {cart.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <div className="h-16 w-16 rounded-3xl bg-slate-100 mx-auto flex items-center justify-center text-slate-300">
@@ -935,20 +1251,16 @@ function CartDialog({
               {cart.map((line) => (
                 <li
                   key={line.lineId}
-                  className="bg-slate-50 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300"
+                  className="bg-slate-50 rounded-2xl p-3 sm:p-4 flex gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300"
                 >
-                  {line.imageUrl ? (
-                    <ItemImage
-                      src={line.imageUrl}
-                      alt={line.itemName}
-                      className="h-16 w-16 rounded-2xl flex-shrink-0 shadow-sm"
-                      iconSize={20}
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-2xl bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-400">
-                      <Coffee size={20} />
-                    </div>
-                  )}
+                  <ItemImage
+                    src={line.imageUrl}
+                    alt={line.itemName}
+                    fallbackName={line.itemName}
+                    fallbackVariant="thumb"
+                    className="h-16 w-16 rounded-2xl flex-shrink-0 shadow-sm"
+                    iconSize={20}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -1012,7 +1324,7 @@ function CartDialog({
 
         {cart.length > 0 && (
           <footer
-            className="border-t border-slate-100 px-6 pt-4 space-y-3"
+            className="border-t border-slate-100 px-5 sm:px-6 pt-4 space-y-3"
             style={{
               paddingBottom: "max(env(safe-area-inset-bottom, 0px), 1rem)",
             }}
