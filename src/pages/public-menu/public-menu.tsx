@@ -591,7 +591,7 @@ export default function PublicMenuPage() {
 
   /* ---------- page ---------- */
   return (
-    <div className="min-h-screen bg-[#F8FAFC] selection:bg-primary/20 antialiased">
+    <div className="light-theme min-h-screen bg-[#F8FAFC] selection:bg-primary/20 antialiased text-foreground">
       {/* ====== Header ====== */}
       <header className="sticky top-0 z-30 bg-white/75 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-4xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
@@ -943,7 +943,7 @@ function ItemDetailDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 sm:max-w-2xl max-h-[94vh] sm:max-h-[92vh] overflow-hidden rounded-t-[2rem] sm:rounded-[2rem] border-0 shadow-2xl flex flex-col"
+        className="light-theme p-0 gap-0 sm:max-w-2xl max-h-[94vh] sm:max-h-[92vh] overflow-hidden rounded-t-[2rem] sm:rounded-[2rem] border-0 shadow-2xl flex flex-col bg-white transform-gpu"
         showClose={false}
       >
         <DialogTitle className="sr-only">{item.name}</DialogTitle>
@@ -1215,7 +1215,7 @@ function CartDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border-0 flex flex-col"
+        className="light-theme p-0 gap-0 sm:max-w-md max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border-0 flex flex-col bg-white transform-gpu"
         showClose={false}
       >
         <DialogTitle className="sr-only">Your Order</DialogTitle>
