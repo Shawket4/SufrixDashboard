@@ -437,7 +437,6 @@ function ItemImage({
   fallbackName,
   fallbackVariant = "card",
   disableFade = false,
-  iconSize = 28,
 }: {
   src?: string | null;
   alt: string;
@@ -1247,8 +1246,6 @@ function MenuItemCard({
  *  Mobile: full-width sheet anchored to bottom, drag-to-dismiss
  *  Desktop: centered, max-w-2xl, anchored 1.5rem from bottom
  * ========================================================================= */
-
-type SheetPhase = "closed" | "opening" | "open" | "closing";
 
 function BottomSheet({
   open,
