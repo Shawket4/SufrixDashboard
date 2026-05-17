@@ -22,7 +22,6 @@ import {
   Droplet,
   GlassWater,
   IceCream,
-  ImageOff,
   Leaf,
   Minus,
   Plus,
@@ -437,7 +436,6 @@ function ItemImage({
   className,
   fallbackName,
   fallbackVariant = "card",
-  iconSize = 28,
   disableFade = false,
 }: {
   src?: string | null;
@@ -575,6 +573,11 @@ export default function PublicMenuPage() {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.dir() === "rtl";
   const { data: menu, isLoading, error, refetch } = usePublicMenu(orgId ?? null);
+
+  /* ---------- lazy load cairo fonts ---------- */
+  useEffect(() => {
+    import("./cairo.css");
+  }, []);
 
   /* ---------- silent refetch every 5 minutes (SWR) ---------- */
   useEffect(() => {
@@ -801,7 +804,7 @@ export default function PublicMenuPage() {
     return (
       <div
         dir={i18n.dir()}
-        className="max-w-4xl mx-auto p-4 space-y-8 animate-in fade-in duration-500"
+        className="public-menu-root max-w-4xl mx-auto p-4 space-y-8 animate-in fade-in duration-500"
       >
         <div className="flex items-center gap-4 mt-6">
           <Skeleton className="h-14 w-14 rounded-2xl" />
@@ -836,7 +839,7 @@ export default function PublicMenuPage() {
     return (
       <div
         dir={i18n.dir()}
-        className="min-h-screen flex items-center justify-center p-4 bg-slate-50"
+        className="public-menu-root min-h-screen flex items-center justify-center p-4 bg-slate-50"
       >
         <div className="text-center space-y-6 max-w-sm animate-in fade-in zoom-in-95 duration-500">
           <div className="h-24 w-24 bg-white shadow-sm rounded-3xl flex items-center justify-center mx-auto text-slate-300 border border-slate-100">
@@ -862,7 +865,7 @@ export default function PublicMenuPage() {
   return (
     <div
       dir={i18n.dir()}
-      className="light-theme min-h-screen bg-[#F8FAFC] selection:bg-primary/20 antialiased text-foreground"
+      className="public-menu-root light-theme min-h-screen bg-[#F8FAFC] selection:bg-primary/20 antialiased text-foreground"
     >
       {/* ====== Header ====== */}
       <header className="sticky top-0 z-30 bg-white/75 backdrop-blur-xl border-b border-slate-200/60">
