@@ -169,7 +169,7 @@ function OrderDetailDrawer({ open, onClose, orderId, onVoid }: { open: boolean; 
                           {it.optionals && it.optionals.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {it.optionals.map((o, idx) => {
-                                const optionName = o.fieldName || o.name || "";
+                                const optionName = o.field_name || o.fieldName || o.name || "";
                                 if (!optionName) return null;
                                 const hasPrice = o.price > 0;
                                 return (

@@ -286,9 +286,15 @@ export interface OrderItemAddon {
 export interface OrderItemOptional {
   id?: string;
   order_item_id?: string;
+  optional_field_id?: string;
+  field_name?: string;
   fieldName?: string;
   name?: string;
   price: number;
+  org_ingredient_id?: string | null;
+  ingredient_name?: string | null;
+  ingredient_unit?: string | null;
+  quantity_deducted?: string | number | null;
 }
 
 export interface InventoryDeduction {
