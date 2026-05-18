@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
-  Ban, ChevronLeft, ChevronRight, CreditCard, Receipt, ShoppingBag, X,
+  Ban, ChevronLeft, ChevronRight, CreditCard, Receipt, ShoppingBag, X, CircleDollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/shared/ui/page-shell";
@@ -18,6 +18,7 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { StatCard } from "@/shared/ui/stat-card";
 import { DateRangePicker } from "@/shared/ui/date-range-picker";
+import { ExportDrawer } from "@/features/orders-export";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/shared/ui/dialog";
@@ -32,8 +33,6 @@ import { PAYMENT_METHODS, QUERY_KEYS, PAYMENT_COLORS, ORDER_STATUSES } from "@/s
 import { useCurrentContext } from "@/shared/hooks/use-current-context";
 import { getErrorMessage } from "@/shared/api/errors";
 import { fmtDateTime, fmtMoney, fmtUnit } from "@/shared/lib/format";
-import { exportToExcel } from "@/shared/lib/excel";
-import { apiClient } from "@/shared/api/client";
 import type { Order, OrdersQuery, PaymentMethod, OrderStatus } from "@/shared/types";
 
 function VoidDialog({ open, onClose, order }: { open: boolean; onClose: () => void; order: Order | null }) {
@@ -169,7 +168,7 @@ function OrderDetailDrawer({ open, onClose, orderId, onVoid }: { open: boolean; 
                           {it.optionals && it.optionals.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {it.optionals.map((o, idx) => {
-                                const optionName = o.field_name || o.fieldName || o.name || "";
+                                const optionName = o.field_name;
                                 if (!optionName) return null;
                                 const hasPrice = o.price > 0;
                                 return (
@@ -250,12 +249,18 @@ export default function Orders() {
   const perPage = 25;
   const [detailId, setDetailId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<Order | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useMemo(() => {
     if (!selBranch && branches.length > 0) setSelBranch(branches[0].id);
   }, [branches, selBranch]);
 
   const { data: shifts = [] } = useShifts(selBranch || null);
+
+  const activeShift = shifts.find((s) => s.id === selShift);
+  const shiftLabel = activeShift
+    ? `${activeShift.teller_name} · ${fmtDateTime(activeShift.opened_at)}`
+    : null;
 
   const query: OrdersQuery = {
     branch_id: selBranch || undefined,
@@ -303,41 +308,7 @@ const stats = data?.summary ?? { revenue: 0, completed: 0, voided: 0, discounts:
     },
   ];
 
-  const handleExport = async () => {
-    if (!selBranch) return;
-    try {
-      const res = await apiClient.get<{ data: Order[]; total: number }>("/orders", {
-        params: { ...query, page: 1, per_page: 999999 },
-      });
-      const all = res.data.data;
-      await exportToExcel({
-        filename: "Orders",
-        sheets: [
-          {
-            name: "Orders",
-            title: t("orders.title"),
-            columns: [
-              { key: "num", header: "#", accessor: (o: Order) => o.order_number, type: "integer", width: 10 },
-              { key: "date", header: t("common.date"), accessor: (o: Order) => new Date(o.created_at), type: "dateTime", width: 20 },
-              { key: "teller", header: t("dashboard.teller"), accessor: (o: Order) => o.teller_name, width: 18 },
-              { key: "customer", header: t("orders.customer"), accessor: (o: Order) => o.customer_name ?? "—", width: 20 },
-              { key: "payment", header: t("orders.payment"), accessor: (o: Order) => t(`payments.${o.payment_method}`), width: 16 },
-              { key: "sub", header: t("common.subtotal"), accessor: (o: Order) => o.subtotal, type: "money", width: 14, total: true },
-              { key: "disc", header: t("orders.discount"), accessor: (o: Order) => o.discount_amount, type: "money", width: 14, total: true },
-              { key: "tax", header: t("orders.tax"), accessor: (o: Order) => o.tax_amount, type: "money", width: 12, total: true },
-              { key: "tip", header: t("orders.tip"), accessor: (o: Order) => o.tip_amount ?? 0, type: "money", width: 12, total: true },
-              { key: "total", header: t("common.total"), accessor: (o: Order) => o.total_amount, type: "money", width: 14, total: true },
-              { key: "status", header: t("common.status"), accessor: (o: Order) => t(`orderStatus.${o.status}`), width: 14 },
-            ],
-            rows: all,
-            totals: true,
-          },
-        ],
-      });
-    } catch (e) {
-      toast.error(getErrorMessage(e));
-    }
-  };
+  // Removed legacy handleExport; replaced by orders-export drawer feature
 
   const clearFilters = () => {
     setSelShift("");
@@ -362,11 +333,12 @@ const stats = data?.summary ?? { revenue: 0, completed: 0, voided: 0, discounts:
         )
       }
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-<StatCard label={t("orders.totalRevenue")}  value={fmtMoney(stats.revenue)}    loading={isLoading} icon={Receipt}     accent="success"     />
-<StatCard label={t("orders.completed")}     value={stats.completed}             loading={isLoading} icon={ShoppingBag} accent="info"        />
-<StatCard label={t("orders.voidedOrders")}  value={stats.voided}                loading={isLoading} icon={Ban}         accent="destructive" />
-<StatCard label={t("orders.totalDiscounts")} value={fmtMoney(stats.discounts)}  loading={isLoading} icon={CreditCard}  accent="warning"     />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard label={t("orders.totalRevenue")} value={fmtMoney(stats.revenue)} loading={isLoading} icon={Receipt} accent="success" />
+        <StatCard label={t("orders.completed")} value={stats.completed} loading={isLoading} icon={ShoppingBag} accent="info" />
+        <StatCard label={t("orders.voidedOrders")} value={stats.voided} loading={isLoading} icon={Ban} accent="destructive" />
+        <StatCard label={t("orders.totalDiscounts")} value={fmtMoney(stats.discounts)} loading={isLoading} icon={CreditCard} accent="warning" />
+        <StatCard label={t("orders.totalTips")} value={fmtMoney(stats.tips)} loading={isLoading} icon={CircleDollarSign} accent="info" />
       </div>
 
       <Card>
@@ -412,7 +384,7 @@ const stats = data?.summary ?? { revenue: 0, completed: 0, voided: 0, discounts:
             data={orders}
             isLoading={isLoading}
             onRowClick={(o) => setDetailId(o.id)}
-            onExport={handleExport}
+            onExport={() => setExportOpen(true)}
             rowClassName={(r) => r.original.status === "voided" ? "opacity-60" : undefined}
           />
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -443,6 +415,14 @@ const stats = data?.summary ?? { revenue: 0, completed: 0, voided: 0, discounts:
         onClose={() => setVoidTarget(null)}
         order={voidTarget}
         key={voidTarget?.id ?? "none"}
+      />
+      <ExportDrawer
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        filters={query}
+        branchName={branches.find((b) => b.id === selBranch)?.name ?? ""}
+        shiftLabel={shiftLabel}
+        totalApprox={total}
       />
     </PageShell>
   );

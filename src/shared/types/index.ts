@@ -284,17 +284,15 @@ export interface OrderItemAddon {
 }
 
 export interface OrderItemOptional {
-  id?: string;
-  order_item_id?: string;
-  optional_field_id?: string;
-  field_name?: string;
-  fieldName?: string;
-  name?: string;
+  id: string;
+  order_item_id: string;
+  optional_field_id: string | null;
+  field_name: string;
   price: number;
-  org_ingredient_id?: string | null;
-  ingredient_name?: string | null;
-  ingredient_unit?: string | null;
-  quantity_deducted?: string | number | null;
+  org_ingredient_id: string | null;
+  ingredient_name: string | null;
+  ingredient_unit: string | null;
+  quantity_deducted: string | number | null;
 }
 
 export interface InventoryDeduction {
@@ -319,6 +317,29 @@ export interface OrderItem {
   addons: OrderItemAddon[];
   optionals?: OrderItemOptional[];
   deductions_snapshot: InventoryDeduction[];
+}
+
+export interface OrderItemFull {
+  id: string;
+  order_id: string;
+  menu_item_id: string;
+  item_name: string;
+  size_label: string | null;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+  notes: string | null;
+  deductions_snapshot: InventoryDeduction[];
+  addons: OrderItemAddon[];
+  optionals: OrderItemOptional[];
+}
+
+export interface OrderPayment {
+  id: string;
+  order_id: string;
+  method: PaymentMethod;
+  amount: number;
+  reference: string | null;
 }
 
 export interface Order {
@@ -347,6 +368,24 @@ export interface Order {
   voided_by: string | null;
   created_at: string;
   items?: OrderItem[];
+}
+
+export interface OrderExport extends Order {
+  items: OrderItemFull[];
+  payments: OrderPayment[];
+}
+
+export interface ExportResponse {
+  data: OrderExport[];
+  total: number;
+  generated_at: string;
+  summary: {
+    revenue: number;
+    completed: number;
+    voided: number;
+    discounts: number;
+    tips: number;
+  };
 }
 
 export interface OrderSummary {

@@ -36,6 +36,7 @@ import { LanguageToggle } from "@/widgets/language-toggle/language-toggle";
 import type { Role } from "@/shared/config/constants";
 import type { LucideIcon } from "lucide-react";
 import { useOrg } from "@/entities/org/queries";
+import { usePermissions } from "@/shared/hooks/use-permissions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation structure
@@ -45,6 +46,7 @@ interface NavItem {
   icon: LucideIcon;
   key: string;
   roles: Role[];
+  resource?: string;
 }
 
 interface NavGroup {
@@ -62,28 +64,28 @@ const NAV: NavGroup[] = [
   {
     heading: "nav.operations",
     items: [
-      { to: "/orders", icon: ShoppingBag, key: "nav.orders", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/shifts", icon: Clock, key: "nav.shifts", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/inventory", icon: Package, key: "nav.inventory", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/analytics", icon: BarChart2, key: "nav.analytics", roles: ["super_admin", "org_admin", "branch_manager"] },
+      { to: "/orders", icon: ShoppingBag, key: "nav.orders", roles: ["super_admin", "org_admin", "branch_manager"], resource: "orders" },
+      { to: "/shifts", icon: Clock, key: "nav.shifts", roles: ["super_admin", "org_admin", "branch_manager"], resource: "shifts" },
+      { to: "/inventory", icon: Package, key: "nav.inventory", roles: ["super_admin", "org_admin", "branch_manager"], resource: "inventory" },
+      { to: "/analytics", icon: BarChart2, key: "nav.analytics", roles: ["super_admin", "org_admin", "branch_manager"], resource: "orders" },
     ],
   },
   {
     heading: "nav.catalog",
     items: [
-      { to: "/menu", icon: Coffee, key: "nav.menu", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/recipes", icon: BookOpen, key: "nav.recipes", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/discounts", icon: Tag, key: "nav.discounts", roles: ["super_admin", "org_admin", "branch_manager"] },
+      { to: "/menu", icon: Coffee, key: "nav.menu", roles: ["super_admin", "org_admin", "branch_manager"], resource: "menu_items" },
+      { to: "/recipes", icon: BookOpen, key: "nav.recipes", roles: ["super_admin", "org_admin", "branch_manager"], resource: "recipes" },
+      { to: "/discounts", icon: Tag, key: "nav.discounts", roles: ["super_admin", "org_admin", "branch_manager"], resource: "discounts" },
     ],
   },
   {
     heading: "nav.admin",
     items: [
-      { to: "/orgs", icon: Building2, key: "nav.orgs", roles: ["super_admin"] },
-      { to: "/branches", icon: GitBranch, key: "nav.branches", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/users", icon: Users, key: "nav.users", roles: ["super_admin", "org_admin", "branch_manager"] },
-      { to: "/permissions", icon: Shield, key: "nav.permissions", roles: ["super_admin", "org_admin"] },
-      { to: "/settings", icon: Settings, key: "nav.settings", roles: ["super_admin", "org_admin", "branch_manager"] },
+      { to: "/orgs", icon: Building2, key: "nav.orgs", roles: ["super_admin"], resource: "orgs" },
+      { to: "/branches", icon: GitBranch, key: "nav.branches", roles: ["super_admin", "org_admin", "branch_manager"], resource: "branches" },
+      { to: "/users", icon: Users, key: "nav.users", roles: ["super_admin", "org_admin", "branch_manager"], resource: "users" },
+      { to: "/permissions", icon: Shield, key: "nav.permissions", roles: ["super_admin", "org_admin"], resource: "permissions" },
+      { to: "/settings", icon: Settings, key: "nav.settings", roles: ["super_admin", "org_admin", "branch_manager"], resource: "branches" },
     ],
   },
 ];
@@ -240,17 +242,20 @@ function SidebarContent({
     navigate("/login");
   };
 
+  const { can } = usePermissions();
+
   const groups = useMemo(() => {
     const q = normalize(search);
     return NAV.map((g) => ({
       ...g,
       items: g.items.filter((i) => {
         if (!role || !i.roles.includes(role)) return false;
+        if (i.resource && !can(i.resource, "read")) return false;
         if (!q) return true;
         return normalize(t(i.key)).includes(q);
       }),
     })).filter((g) => g.items.length > 0);
-  }, [role, search, t]);
+  }, [role, search, t, can]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

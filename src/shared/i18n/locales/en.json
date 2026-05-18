@@ -536,6 +536,8 @@
     "forceCloseWarning": "Force closing ends the shift without a proper cash count. Use only when necessary.",
     "forceCloseReason": "Reason",
     "forceCloseReasonPh": "Required reason…",
+    "deleteConfirmTitle": "Delete Shift?",
+    "deleteConfirmDesc": "This will permanently delete the shift, all of its orders, and all related records. This action is extremely destructive and cannot be undone.",
     "cashDialog": {
       "title": "Cash Movement",
       "direction": "Direction",
@@ -563,7 +565,8 @@
       "opened": "Shift opened",
       "closed": "Shift closed",
       "forceClosed": "Shift force closed",
-      "cashRecorded": "Cash movement recorded"
+      "cashRecorded": "Cash movement recorded",
+      "deleted": "Shift deleted successfully"
     }
   },
   "orders": {
@@ -605,7 +608,63 @@
     "noMatch": "No orders match your filters",
     "noMatchHint": "Try adjusting the branch, shift or date range",
     "dateRange": "Date Range",
-    "showing": "Showing {{from}}-{{to}} of {{total}}"
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "totalUsage": "Total Quantity",
+    "occurrences": "Occurrences"
+  },
+  "ordersExport": {
+    "title": "Export Orders",
+    "subtitle": "Download detailed Excel sheet exports tailored to your custom specifications.",
+    "selectBranchError": "Please select a branch first",
+    "noGrainsSelected": "Please select at least one sheet to export",
+    "noOrders": "No matching orders found for this export selection.",
+    "success": "Excel workbook exported successfully!",
+    "tooLarge": "Export limit exceeded. Please narrow your date range or filters.",
+    "customizeBtn": "Customize export sheets",
+    "lockedGrainsHint": "Locked. Switch to Custom preset to manually select sheets.",
+    "grainsSection": "Select sheets to include in your workbook:",
+    "filtersSummary": "Filters Snapshot",
+    "filename": "Filename",
+    "filenameHint": "Leave blank to auto-generate a structured filename based on the preset.",
+    "rowEstimate": "Estimated rows: {{count}}",
+    "cancelButton": "Cancel",
+    "exportButton": "Export Workbook",
+    "presets": {
+      "title": "Export Presets",
+      "accountantDaily": {
+        "label": "Daily Accountant Export",
+        "desc": "Completed orders and summaries optimized for auditing."
+      },
+      "talabatReconcile": {
+        "label": "Talabat Reconciliation",
+        "desc": "Orders paid online/cash via Talabat for swift matching."
+      },
+      "shiftHandoff": {
+        "label": "Shift Handoff Summary",
+        "desc": "Order and split-payment workbook breakdown for the shift."
+      },
+      "ingredientConsumption": {
+        "label": "Ingredient Consumption",
+        "desc": "Exact and aggregated snapshots of deducted recipe ingredients."
+      },
+      "custom": {
+        "label": "Custom Configuration",
+        "desc": "Manually toggle data grains and set custom parameters."
+      }
+    },
+    "grains": {
+      "order": "Orders Summary",
+      "line_item": "Detailed Line Items",
+      "payment": "Split Payments Breakdown",
+      "deduction": "Ingredient Inventory Deductions"
+    },
+    "sheets": {
+      "orders": "Orders",
+      "lineItems": "Line Items",
+      "payments": "Payments",
+      "deductionsRaw": "Ingredient Usage",
+      "deductionsAgg": "Ingredient Usage (Totals)"
+    }
   },
   "analytics": {
     "title": "Analytics",

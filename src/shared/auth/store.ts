@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { apiContext } from "@/shared/api/client";
+import { queryClient } from "@/shared/api/query";
+import { useAppStore } from "@/shared/auth/app-store";
 import { LS_KEYS } from "@/shared/config/constants";
 import type { UserPublic } from "@/shared/types";
 
@@ -24,7 +26,21 @@ export const useAuthStore = create<AuthState>()(
         set({ token, user });
       },
       signOut: () => {
+        // Purge api contexts
         apiContext.setToken(null);
+        apiContext.setOrg(null);
+        apiContext.setBranch(null);
+
+        // Reset persistent app context
+        useAppStore.setState({
+          selectedOrgId: null,
+          selectedOrgLogo: null,
+          selectedBranchId: null,
+        });
+
+        // Flush React Query cached requests
+        queryClient.clear();
+
         set({ token: null, user: null });
       },
       setUser: (user) => set({ user }),
