@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 119.35 43.42">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: Cairo-SemiBold, Cairo;
+        font-size: 34px;
+        font-variation-settings: 'wght' 600, 'slnt' 0;
+        font-weight: 600;
+        isolation: isolate;
+        letter-spacing: -.02em;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #0a2540;
+      }
+
+      .cls-3 {
+        fill: #c25b3f;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g>
+      <g>
+        <rect class="cls-2" x="10.1" y=".95" width="5.25" height="31.51" rx=".66" ry=".66" transform="translate(-8.09 13.89) rotate(-45)"/>
+        <g>
+          <rect class="cls-2" x="-3.03" y="14.08" width="31.51" height="5.25" rx=".66" ry=".66" transform="translate(-8.09 13.89) rotate(-45)"/>
+          <circle class="cls-3" cx="12.73" cy="16.71" r="2.63"/>
+        </g>
+      </g>
+      <text class="cls-1" transform="translate(39.93 28.9)"><tspan x="0" y="0">Sufrix</tspan></text>
+    </g>
+  </g>
+</svg>
