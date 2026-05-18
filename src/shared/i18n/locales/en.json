@@ -4,6 +4,7 @@
     "tagline": "Coffee Shop Management"
   },
   "common": {
+    "source": "Source",
     "save": "Save",
     "saveChanges": "Save Changes",
     "cancel": "Cancel",
@@ -280,6 +281,10 @@
     }
   },
   "menu": {
+    "itemName": "Item Name",
+    "size": "Size",
+    "unitPrice": "Unit Price",
+    "optionals": "Optionals",
     "title": "Menu",
     "subtitle": "Categories, items and addons",
     "items": "Items",
@@ -387,6 +392,7 @@
     }
   },
   "recipes": {
+    "ingredients": "Ingredients",
     "title": "Recipes",
     "subtitle": "Configure ingredient deductions and addon rules",
     "tabs": {
@@ -435,6 +441,8 @@
     }
   },
   "inventory": {
+    "ingredient": "Ingredient",
+    "unit": "Unit",
     "title": "Inventory",
     "subtitle": "Manage ingredients and branch stock",
     "tabs": {
@@ -510,6 +518,7 @@
     }
   },
   "shifts": {
+    "teller": "Teller",
     "title": "Shifts",
     "subtitle": "Reports and shift management",
     "openShift": "Open Shift",
@@ -570,6 +579,14 @@
     }
   },
   "orders": {
+    "branch": "Branch",
+    "date": "Date",
+    "paymentMethod": "Payment Method",
+    "reference": "Reference",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "voidReason": "Void Reason",
+    "allTime": "All Time",
     "title": "Orders",
     "subtitle": "Browse, filter and export orders by branch and shift",
     "allShifts": "All shifts",
@@ -758,5 +775,13 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "uploader": {
+    "choose": "Choose Image",
+    "notAnImage": "Selected file must be an image",
+    "remove": "Remove",
+    "replace": "Replace",
+    "tooLarge": "Image size exceeds 5MB limit",
+    "uploading": "Uploading..."
   }
 }
