@@ -16,4 +16,5 @@ export const shiftApi = {
   addMovement: (id: string, data: { amount: number; note: string }) =>
     apiClient.post<CashMovement>(`/shifts/${id}/cash-movements`, data).then((r) => r.data),
   report: (id: string) => apiClient.get<ShiftReport>(`/shifts/${id}/report`).then((r) => r.data),
+  delete: (id: string) => apiClient.delete(`/shifts/${id}`).then(() => undefined),
 };

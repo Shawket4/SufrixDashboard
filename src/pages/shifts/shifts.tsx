@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
   AlertTriangle, ArrowDownCircle, ArrowUpCircle, Clock, DollarSign,
-  FileText, Plus, Printer, ShieldAlert, X,
+  FileText, Plus, Printer, ShieldAlert, X, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/shared/ui/page-shell";
@@ -23,6 +23,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { StatCard } from "@/shared/ui/stat-card";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { shiftApi } from "@/entities/shift/api";
 import { useShifts, useCurrentShift, useShiftReport } from "@/entities/shift/queries";
 import { useBranches } from "@/entities/branch/queries";
@@ -422,7 +423,7 @@ const STATUS_VARIANT: Record<ShiftStatus, "success" | "secondary" | "warning"> =
 
 export default function Shifts() {
   const { t } = useTranslation();
-  const { orgId, branchId: ctxBranch } = useCurrentContext();
+  const { orgId, branchId: ctxBranch, role: currentUserRole } = useCurrentContext();
   const { data: branches = [] } = useBranches(orgId);
   const [selBranch, setSelBranch] = useState<string>(ctxBranch ?? "");
 
@@ -438,8 +439,23 @@ export default function Shifts() {
   const [forceDlg, setForceDlg] = useState(false);
   const [cashDlg, setCashDlg] = useState(false);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [deleteShiftId, setDeleteShiftId] = useState<string | null>(null);
 
   const openShift = preFill?.open_shift ?? null;
+  const canDeleteShift = currentUserRole === "org_admin" || currentUserRole === "super_admin";
+
+  const qc = useQueryClient();
+  const { mutate: deleteShift, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => shiftApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shifts"] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.shifts(selBranch) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.shiftPreFill(selBranch) });
+      toast.success(t("shifts.toasts.deleted") || "Shift deleted successfully");
+      setDeleteShiftId(null);
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
 
   const cols: ColumnDef<Shift>[] = [
     {
@@ -472,7 +488,21 @@ export default function Shifts() {
       id: "actions",
       header: "",
       cell: ({ row }) => (
-        <Button variant="ghost" size="iconSm" onClick={(e) => { e.stopPropagation(); setReportId(row.original.id); }}><FileText size={13} /></Button>
+        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="iconSm" onClick={() => setReportId(row.original.id)}>
+            <FileText size={13} />
+          </Button>
+          {canDeleteShift && (
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteShiftId(row.original.id)}
+            >
+              <Trash2 size={13} />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -567,6 +597,17 @@ export default function Shifts() {
       {openShift && <CashMovementDialog open={cashDlg} onClose={() => setCashDlg(false)} shiftId={openShift.id} />}
 
       <ShiftReportDrawer open={!!reportId} onClose={() => setReportId(null)} shiftId={reportId} />
+
+      <ConfirmDialog
+        open={!!deleteShiftId}
+        onOpenChange={(open) => !open && setDeleteShiftId(null)}
+        title={t("shifts.deleteConfirmTitle") || "Delete Shift?"}
+        description={t("shifts.deleteConfirmDesc") || "This will permanently delete the shift, all of its orders, and all related records. This action is extremely destructive and cannot be undone."}
+        confirmLabel={t("common.delete") || "Delete"}
+        destructive
+        loading={isDeleting}
+        onConfirm={() => deleteShiftId && deleteShift(deleteShiftId)}
+      />
     </PageShell>
   );
 }
