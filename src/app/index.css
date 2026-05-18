@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 39 43% 96%; /* Cream #FAF7F2 */
+    --background: 210 15% 97%; /* Soft slate-white #F4F6F8 */
     --foreground: 210 73% 15%; /* Sufrix navy #0A2540 */
 
     --card: 0 0% 100%; /* Crisp Pure White */
@@ -14,15 +14,15 @@
     --popover-foreground: 210 73% 15%;
 
     --primary: 210 73% 15%; /* Sufrix Navy #0A2540 */
-    --primary-foreground: 39 43% 96%; /* Cream */
+    --primary-foreground: 210 15% 97%; /* Soft slate-white */
 
     --secondary: 13 52% 50%; /* Terracotta #C25B3F */
-    --secondary-foreground: 39 43% 96%; /* Cream */
+    --secondary-foreground: 210 15% 97%; /* Soft slate-white */
 
-    --muted: 39 30% 90%;
-    --muted-foreground: 210 20% 45%;
+    --muted: 210 15% 92%;
+    --muted-foreground: 210 15% 45%;
 
-    --accent: 39 30% 90%;
+    --accent: 210 15% 92%;
     --accent-foreground: 210 73% 15%;
 
     --destructive: 0 72% 51%;
@@ -37,15 +37,15 @@
     --info: 214 100% 45%;
     --info-foreground: 0 0% 100%;
 
-    --border: 39 20% 86%;
-    --input: 39 20% 86%;
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
     --ring: 13 52% 50%; /* Terracotta focus ring */
 
     --radius: 0.75rem;
   }
 
   .light-theme {
-    --background: 39 43% 96%; /* Cream #FAF7F2 */
+    --background: 210 15% 97%; /* Soft slate-white #F4F6F8 */
     --foreground: 210 73% 15%; /* Sufrix navy #0A2540 */
 
     --card: 0 0% 100%;
@@ -55,15 +55,15 @@
     --popover-foreground: 210 73% 15%;
 
     --primary: 210 73% 15%;
-    --primary-foreground: 39 43% 96%;
+    --primary-foreground: 210 15% 97%;
 
     --secondary: 13 52% 50%;
-    --secondary-foreground: 39 43% 96%;
+    --secondary-foreground: 210 15% 97%;
 
-    --muted: 39 30% 90%;
-    --muted-foreground: 210 20% 45%;
+    --muted: 210 15% 92%;
+    --muted-foreground: 210 15% 45%;
 
-    --accent: 39 30% 90%;
+    --accent: 210 15% 92%;
     --accent-foreground: 210 73% 15%;
 
     --destructive: 0 72% 51%;
@@ -78,32 +78,32 @@
     --info: 214 100% 45%;
     --info-foreground: 0 0% 100%;
 
-    --border: 39 20% 86%;
-    --input: 39 20% 86%;
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
     --ring: 13 52% 50%;
   }
 
   .dark {
     --background: 210 73% 8%; /* Very dark Sufrix Navy */
-    --foreground: 39 43% 96%; /* Cream */
+    --foreground: 210 15% 97%; /* Soft slate-white */
 
     --card: 210 73% 12%; /* Slightly lighter dark navy */
-    --card-foreground: 39 43% 96%;
+    --card-foreground: 210 15% 97%;
 
     --popover: 210 73% 12%;
-    --popover-foreground: 39 43% 96%;
+    --popover-foreground: 210 15% 97%;
 
     --primary: 13 52% 50%; /* Terracotta #C25B3F - pops in dark mode! */
-    --primary-foreground: 39 43% 96%; /* Cream */
+    --primary-foreground: 210 15% 97%; /* Soft slate-white */
 
     --secondary: 210 50% 20%;
-    --secondary-foreground: 39 43% 96%;
+    --secondary-foreground: 210 15% 97%;
 
     --muted: 210 50% 16%;
-    --muted-foreground: 39 20% 75%;
+    --muted-foreground: 210 15% 75%;
 
     --accent: 210 50% 20%;
-    --accent-foreground: 39 43% 96%;
+    --accent-foreground: 210 15% 97%;
 
     --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;

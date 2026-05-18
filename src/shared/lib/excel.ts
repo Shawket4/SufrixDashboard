@@ -78,10 +78,10 @@ export interface ExcelExportConfig {
 // ── Palette ──────────────────────────────────────────────────────────────────
 
 const PALETTE = {
-  brand: "FF0039BF",
-  brandLight: "FF3B6FE0",
+  brand: "FF0A2540", // Sufrix Navy
+  brandLight: "FFC25B3F", // Terracotta
   white: "FFFFFFFF",
-  rowEven: "FFF9FAFB",
+  rowEven: "FFF4F6F8", // Cohesive soft slate-white background
   border: "FFE5E7EB",
   text: "FF111827",
   muted: "FF6B7280",
