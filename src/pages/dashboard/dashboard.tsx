@@ -24,6 +24,7 @@ import { apiClient } from "@/shared/api/client";
 import type { BranchInventoryItem, Order, Shift } from "@/shared/types";
 import { useQueries } from "@tanstack/react-query";
 import { shiftApi } from "@/entities/shift/api";
+import { usePermissions } from "@/shared/hooks/use-permissions";
 
 const greet = (name: string, t: (k: string, p?: Record<string, unknown>) => string) => {
   const h = new Date().getHours();
@@ -190,10 +191,11 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, role, orgId, isSuperAdmin } = useCurrentContext();
+  const { can } = usePermissions();
 
-  const { data: orgs = [] } = useOrgs();
-  const { data: branches = [] } = useBranches(orgId);
-  const { data: users = [] } = useUsers(orgId);
+  const { data: orgs = [] } = useOrgs({ enabled: isSuperAdmin });
+  const { data: branches = [] } = useBranches(orgId, { enabled: isSuperAdmin || can("branches", "read") });
+  const { data: users = [] } = useUsers(orgId, { enabled: isSuperAdmin || can("users", "read") });
 
   // For each branch, determine open shift (drives active count + "first open branch" for recent orders)
   const preFills = useQueries({
@@ -201,7 +203,7 @@ export default function Dashboard() {
       queryKey: ["shift-prefill", b.id],
       queryFn: () => shiftApi.getCurrent(b.id),
       refetchInterval: 60_000,
-      enabled: !!b.id,
+      enabled: !!b.id && (isSuperAdmin || can("shifts", "read")),
     })),
   });
 
@@ -232,48 +234,68 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            <StatCard label={t("users.totalUsers")} value={users.length} icon={UsersIcon} onClick={() => navigate("/users")} />
-            <StatCard label={t("nav.branches")} value={branches.length} icon={GitBranch} accent="info" onClick={() => navigate("/branches")} />
-            <StatCard label={t("dashboard.operating")} value={`${activeShiftCount}/${branches.length}`} icon={LayoutGrid} accent="violet" />
-            <StatCard label={t("dashboard.activeShifts")} value={activeShiftCount} icon={Clock} accent="success" />
+            {can("users", "read") && (
+              <StatCard label={t("users.totalUsers")} value={users.length} icon={UsersIcon} onClick={() => navigate("/users")} />
+            )}
+            {can("branches", "read") && (
+              <StatCard label={t("nav.branches")} value={branches.length} icon={GitBranch} accent="info" onClick={() => navigate("/branches")} />
+            )}
+            {can("branches", "read") && (
+              <StatCard label={t("dashboard.operating")} value={`${activeShiftCount}/${branches.length}`} icon={LayoutGrid} accent="violet" />
+            )}
+            {can("shifts", "read") && (
+              <StatCard label={t("dashboard.activeShifts")} value={activeShiftCount} icon={Clock} accent="success" />
+            )}
           </>
         )}
       </div>
 
       {/* Branch grid */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold flex items-center gap-2"><GitBranch size={14} /> {t("dashboard.branchStatus")}</p>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/branches")}>{t("common.all")}</Button>
-          </div>
-          {branches.length === 0 ? (
-            <EmptyState icon={GitBranch} title={t("common.noResults")} className="py-8" />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {branches.map((b) => <BranchCard key={b.id} branchId={b.id} branchName={b.name} />)}
+      {(isSuperAdmin || can("branches", "read")) && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold flex items-center gap-2"><GitBranch size={14} /> {t("dashboard.branchStatus")}</p>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/branches")}>{t("common.all")}</Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {branches.length === 0 ? (
+              <EmptyState icon={GitBranch} title={t("common.noResults")} className="py-8" />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {branches.map((b) => <BranchCard key={b.id} branchId={b.id} branchName={b.name} />)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RecentOrdersPanel openShiftInfo={openShiftInfo} />
-        <LowStockPanel branchIds={branches.map((b) => b.id)} />
+        {(isSuperAdmin || can("orders", "read")) && <RecentOrdersPanel openShiftInfo={openShiftInfo} />}
+        {(isSuperAdmin || can("inventory", "read")) && <LowStockPanel branchIds={branches.map((b) => b.id)} />}
       </div>
 
       {/* Quick actions */}
-      <Card>
-        <CardContent className="p-4">
-          <p className="text-sm font-bold mb-3">{t("dashboard.quickActions")}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Button variant="outline" onClick={() => navigate("/orders")}><ShoppingBag /> {t("nav.orders")}</Button>
-            <Button variant="outline" onClick={() => navigate("/shifts")}><Clock /> {t("nav.shifts")}</Button>
-            <Button variant="outline" onClick={() => navigate("/analytics")}><BarChart2 /> {t("nav.analytics")}</Button>
-            <Button variant="outline" onClick={() => navigate("/menu")}><Coffee /> {t("nav.menu")}</Button>
-          </div>
-        </CardContent>
-      </Card>
+      {(isSuperAdmin || can("orders", "read") || can("shifts", "read") || can("menu_items", "read")) && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-bold mb-3">{t("dashboard.quickActions")}</p>
+            <div className="flex flex-wrap gap-2">
+              {(isSuperAdmin || can("orders", "read")) && (
+                <Button variant="outline" onClick={() => navigate("/orders")}><ShoppingBag /> {t("nav.orders")}</Button>
+              )}
+              {(isSuperAdmin || can("shifts", "read")) && (
+                <Button variant="outline" onClick={() => navigate("/shifts")}><Clock /> {t("nav.shifts")}</Button>
+              )}
+              {(isSuperAdmin || can("orders", "read")) && (
+                <Button variant="outline" onClick={() => navigate("/analytics")}><BarChart2 /> {t("nav.analytics")}</Button>
+              )}
+              {(isSuperAdmin || can("menu_items", "read")) && (
+                <Button variant="outline" onClick={() => navigate("/menu")}><Coffee /> {t("nav.menu")}</Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </PageShell>
   );
 }
