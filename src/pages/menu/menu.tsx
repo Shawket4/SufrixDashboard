@@ -311,7 +311,7 @@ function MenuItemDialog({
               <div className="space-y-3 pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-base font-semibold">Sizes</FormLabel>
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendSize({ label: "", price_override: 0 as any, display_order: sizes.length })}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => appendSize({ label: "", price_override: 0 as unknown as number, display_order: sizes.length })}>
                     <Plus size={14} className="me-2" /> Add Size
                   </Button>
                 </div>
@@ -701,8 +701,7 @@ export default function Menu() {
         </Button>
       }
     >
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "items" | "categories" | "addons")}>
         <TabsList>
           <TabsTrigger value="items"><Coffee size={14} /> {t("menu.itemsCount", { count: items.length })}</TabsTrigger>
           <TabsTrigger value="categories"><Tag size={14} /> {t("menu.categoriesCount", { count: categories.length })}</TabsTrigger>

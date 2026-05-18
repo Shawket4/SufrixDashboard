@@ -17,7 +17,9 @@ export function buildSheets(
   orders: OrderExport[],
   grains: Grain[],
   t: TFunction
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): ExcelSheetConfig<any>[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sheets: ExcelSheetConfig<any>[] = [];
 
   if (grains.includes("order")) {

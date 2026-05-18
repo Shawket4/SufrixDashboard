@@ -21,13 +21,13 @@ export function initConsoleSilencer() {
   const originalWarn = console.warn;
   const originalError = console.error;
 
-  console.warn = (...args: any[]) => {
+  console.warn = (...args: unknown[]) => {
     const msg = args.map(String).join(' ');
     if (IGNORED_PATTERNS.some((p) => msg.includes(p))) return;
     originalWarn(...args);
   };
 
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     const msg = args.map(String).join(' ');
     if (IGNORED_PATTERNS.some((p) => msg.includes(p))) return;
     originalError(...args);

@@ -592,7 +592,7 @@ export default function PublicMenuPage() {
     };
 
     if (typeof window !== "undefined") {
-      const win = window as any;
+      const win = window as unknown as { requestIdleCallback?: (cb: () => void) => void };
       if (typeof win.requestIdleCallback === "function") {
         win.requestIdleCallback(() => preloadLottie());
       } else {

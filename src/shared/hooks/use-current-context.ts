@@ -71,5 +71,5 @@ export const useCurrentContext = (): CurrentContext => {
       canManageOrg: isSuperAdmin || isOrgAdmin,
       canManageBranch: isSuperAdmin || isOrgAdmin || role === "branch_manager",
     };
-  }, [user, selectedOrgId, selectedBranchId]);
+  }, [user, selectedOrgId, selectedBranchId, selectedOrgLogo]);
 };

@@ -49,7 +49,7 @@ function DrinksTab({ orgId }: { orgId: string }) {
   const { data: fullItem, isLoading } = useMenuItem(selItemId);
   const { data: catalog = [] } = useCatalog(orgId);
 
-  const recipes = fullItem?.recipes ?? [];
+  const recipes = useMemo(() => fullItem?.recipes ?? [], [fullItem?.recipes]);
 
   const sizes = useMemo<string[]>(() => {
     const declared = (fullItem?.sizes ?? []).map((s) => s.label);

@@ -149,6 +149,41 @@ const columnLetter = (idx: number): string => {
 const cleanSheetName = (name: string): string =>
   name.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
 
+function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || typeof Image === "undefined") {
+      resolve({ width: 135, height: 57 });
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      resolve({ width: 135, height: 57 }); // fallback
+    };
+    img.src = url;
+  });
+}
+
+function fitImageDimensions(
+  naturalWidth: number,
+  naturalHeight: number,
+  maxWidth = 140,
+  maxHeight = 55,
+): { width: number; height: number } {
+  const ratio = naturalWidth / naturalHeight;
+  let width = maxWidth;
+  let height = maxWidth / ratio;
+
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = maxHeight * ratio;
+  }
+
+  return { width, height };
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 export async function exportToExcel(config: ExcelExportConfig): Promise<void> {
@@ -174,19 +209,30 @@ export async function exportToExcel(config: ExcelExportConfig): Promise<void> {
 
     // Preload logo once if any sheet will use it
     let logoId: number | undefined;
+    let logoDimensions = { width: 135, height: 57 };
     const logoUrl = config.logoUrl ?? "/TheRue.png";
     try {
       const res = await fetch(logoUrl);
       if (res.ok) {
         const buf = await res.arrayBuffer();
-        logoId = wb.addImage({ buffer: buf, extension: "png" });
+        const contentType = res.headers.get("content-type");
+        let ext: "png" | "jpeg" = "png";
+        if (contentType && contentType.includes("jpeg")) {
+          ext = "jpeg";
+        } else if (logoUrl.toLowerCase().endsWith(".jpg") || logoUrl.toLowerCase().endsWith(".jpeg")) {
+          ext = "jpeg";
+        }
+        logoId = wb.addImage({ buffer: buf, extension: ext });
+        
+        const dims = await getImageDimensions(logoUrl);
+        logoDimensions = fitImageDimensions(dims.width, dims.height);
       }
     } catch {
       /* logo optional */
     }
 
     for (const sheet of config.sheets) {
-      buildSheet(wb, sheet, config.meta, logoId);
+      buildSheet(wb, sheet, config.meta, logoId, logoDimensions);
     }
 
     toast.loading(t("excel.downloading"), { id: toastId });
@@ -219,6 +265,7 @@ function buildSheet<T>(
   sheet: ExcelSheetConfig<T>,
   meta: string | undefined,
   logoId: number | undefined,
+  logoDimensions: { width: number; height: number },
 ): void {
   const ws = wb.addWorksheet(cleanSheetName(sheet.name), {
     pageSetup: { fitToPage: true, fitToWidth: 1, orientation: "landscape" },
@@ -226,12 +273,21 @@ function buildSheet<T>(
   });
 
   // Column definitions
-  ws.columns = sheet.columns.map((c) => ({ key: c.key, width: c.width ?? 18 }));
+  const columnsSpec = sheet.columns.map((c) => ({ key: c.key, width: c.width ?? 18 }));
+  // If sheet is narrow, pad columns so the banner has enough room and doesn't get cut off
+  const minColumns = 6;
+  if (columnsSpec.length < minColumns) {
+    for (let i = columnsSpec.length; i < minColumns; i++) {
+      columnsSpec.push({ key: `_pad_col_${i}`, width: 18 });
+    }
+  }
+  ws.columns = columnsSpec;
 
   const lastCol = columnLetter(sheet.columns.length - 1);
+  const lastPaddedCol = columnLetter(columnsSpec.length - 1);
 
   // ── Banner (rows 1-3) ──────────────────────────────────────────────────────
-  ws.mergeCells(`A1:${lastCol}1`);
+  ws.mergeCells(`A1:${lastPaddedCol}1`);
   ws.getRow(1).height = 65;
   const titleCell = ws.getCell("A1");
   titleCell.value = sheet.title;
@@ -239,10 +295,14 @@ function buildSheet<T>(
   titleCell.alignment = { horizontal: "right", vertical: "middle", indent: 2 };
 
   if (logoId !== undefined) {
-    ws.addImage(logoId, { tl: { col: 0.2, row: 0.35 }, ext: { width: 135, height: 57 } });
+    ws.addImage(logoId, {
+      tl: { col: 0.2, row: 0.35 },
+      ext: logoDimensions,
+      editAs: "oneCell",
+    });
   }
 
-  ws.mergeCells(`A2:${lastCol}2`);
+  ws.mergeCells(`A2:${lastPaddedCol}2`);
   const subCell = ws.getCell("A2");
   const subParts: string[] = [];
   if (sheet.subtitle) subParts.push(sheet.subtitle);
@@ -253,7 +313,7 @@ function buildSheet<T>(
   subCell.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(2).height = 20;
 
-  ws.mergeCells(`A3:${lastCol}3`);
+  ws.mergeCells(`A3:${lastPaddedCol}3`);
   ws.getRow(3).height = 8;
 
   // ── Stats (rows 4-5) ───────────────────────────────────────────────────────

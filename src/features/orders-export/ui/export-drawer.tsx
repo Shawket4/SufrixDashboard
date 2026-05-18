@@ -67,7 +67,7 @@ export function ExportDrawer({
 
   // Build merged filters for the current selection
   const activePresetSpec = PRESETS.find((p) => p.id === preset)!;
-  const { page, per_page, ...cleanFilters } = filters;
+  const { page: _page, per_page: _per_page, ...cleanFilters } = filters;
   const mergedFilters = {
     ...cleanFilters,
     ...activePresetSpec.filterOverrides,
