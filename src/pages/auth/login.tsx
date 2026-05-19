@@ -38,7 +38,7 @@ export default function Login() {
   });
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-background" dir="ltr">
       {/* Brand panel — flat cream */}
       <aside className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-[#FAF7F2]">
         <div className="flex flex-col justify-between w-full px-14 xl:px-20 py-14">
@@ -60,13 +60,13 @@ export default function Login() {
 
           <div className="flex items-center gap-2 text-[#0A2540]/50 text-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C25B3F]" />
-            <span>© 2026 Sufrix</span>
+            <span>{t("common.copyright", { year: new Date().getFullYear() })}</span>
           </div>
         </div>
       </aside>
 
       {/* Form panel */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:px-6 relative">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:px-6 relative" dir={isAr ? "rtl" : "ltr"}>
         <div className="absolute top-4 end-4 flex items-center gap-1">
           <ThemeToggle />
           <LanguageToggle />
@@ -137,7 +137,7 @@ export default function Login() {
             </form>
           </Form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">© 2026 Sufrix</p>
+          <p className="text-center text-xs text-muted-foreground mt-8">{t("common.copyright", { year: new Date().getFullYear() })}</p>
         </div>
       </main>
     </div>

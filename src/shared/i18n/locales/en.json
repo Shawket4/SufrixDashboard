@@ -4,6 +4,7 @@
     "tagline": "Coffee Shop Management"
   },
   "common": {
+    "copyright": "© {{year}} Sufrix. All rights reserved.",
     "source": "Source",
     "save": "Save",
     "saveChanges": "Save Changes",

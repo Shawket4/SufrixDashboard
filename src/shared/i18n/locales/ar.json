@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "رُو POS",
+    "name": "سوفريكس",
     "tagline": "إدارة المقاهي"
   },
   "common": {
+    "copyright": "© {{year}} سوفريكس. جميع الحقوق محفوظة.",
     "source": "المصدر",
     "save": "حفظ",
     "saveChanges": "حفظ التغييرات",
