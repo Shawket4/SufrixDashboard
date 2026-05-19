@@ -44,7 +44,7 @@ export default function Login() {
           <img
             src="/sufrix.svg"
             alt={t("app.name")}
-            className="h-10 w-auto select-none"
+            className="h-10 w-auto select-none self-start"
             draggable={false}
           />
 
