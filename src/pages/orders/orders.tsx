@@ -334,11 +334,11 @@ const stats = data?.summary ?? { revenue: 0, completed: 0, voided: 0, discounts:
       }
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-        <StatCard label={t("orders.totalRevenue")} value={fmtMoney(stats.revenue)} loading={isLoading} icon={Receipt} accent="success" />
+        <StatCard label={t("orders.totalRevenue")} value={stats.revenue} formatType="money" loading={isLoading} icon={Receipt} accent="success" />
         <StatCard label={t("orders.completed")} value={stats.completed} loading={isLoading} icon={ShoppingBag} accent="info" />
         <StatCard label={t("orders.voidedOrders")} value={stats.voided} loading={isLoading} icon={Ban} accent="destructive" />
-        <StatCard label={t("orders.totalDiscounts")} value={fmtMoney(stats.discounts)} loading={isLoading} icon={CreditCard} accent="warning" />
-        <StatCard label={t("orders.totalTips")} value={fmtMoney(stats.tips)} loading={isLoading} icon={CircleDollarSign} accent="info" />
+        <StatCard label={t("orders.totalDiscounts")} value={stats.discounts} formatType="money" loading={isLoading} icon={CreditCard} accent="warning" />
+        <StatCard label={t("orders.totalTips")} value={stats.tips} formatType="money" loading={isLoading} icon={CircleDollarSign} accent="info" />
       </div>
 
       <Card>

@@ -29,7 +29,7 @@ import {
 import { useBranches } from "@/entities/branch/queries";
 import { PAYMENT_COLORS, PAYMENT_METHODS } from "@/shared/config/constants";
 import { useCurrentContext } from "@/shared/hooks/use-current-context";
-import { fmtMoney, fmtMoneyCompact, fmtNumber, fmtPercent, fmtPeriod, piastresToEgp } from "@/shared/lib/format";
+import { fmtMoney, fmtMoneyCompact, fmtNumber, fmtPeriod, piastresToEgp } from "@/shared/lib/format";
 import { exportToExcel, talabatTotal } from "@/shared/lib/excel";
 import type {
   AddonSalesRow, BranchComparison, ItemSales, StockRow, TellerStats, TimeseriesPoint,
@@ -90,10 +90,10 @@ function OverviewTab({ branchId, from, to }: { branchId: string; from: string | 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-        <StatCard label={t("orders.totalRevenue")} value={fmtMoney(sales.total_revenue)} icon={Receipt} accent="success" />
+        <StatCard label={t("orders.totalRevenue")} value={sales.total_revenue} formatType="money" icon={Receipt} accent="success" />
         <StatCard label={t("orders.completed")} value={sales.total_orders} icon={ShoppingBag} accent="info" />
-        <StatCard label={t("analytics.avgOrder")} value={fmtMoney(aov)} icon={TrendingUp} accent="violet" />
-        <StatCard label={t("analytics.voidRate")} value={fmtPercent(voidRate)} icon={TrendingDown} accent="warning" />
+        <StatCard label={t("analytics.avgOrder")} value={aov} formatType="money" icon={TrendingUp} accent="violet" />
+        <StatCard label={t("analytics.voidRate")} value={voidRate} formatType="percent" icon={TrendingDown} accent="warning" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -193,10 +193,10 @@ function RevenueTab({
     <div className="space-y-4">
       {sales && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          <StatCard label={t("orders.totalRevenue")} value={fmtMoney(sales.total_revenue)} accent="success" />
-          <StatCard label={t("orders.totalDiscounts")} value={fmtMoney(sales.total_discount)} accent="warning" />
-          <StatCard label={t("orders.tax")} value={fmtMoney(sales.total_tax)} accent="info" />
-          <StatCard label={t("orders.totalRevenue") + " (net)"} value={fmtMoney(sales.subtotal)} accent="violet" />
+          <StatCard label={t("orders.totalRevenue")} value={sales.total_revenue} formatType="money" accent="success" />
+          <StatCard label={t("orders.totalDiscounts")} value={sales.total_discount} formatType="money" accent="warning" />
+          <StatCard label={t("orders.tax")} value={sales.total_tax} formatType="money" accent="info" />
+          <StatCard label={t("orders.totalRevenue") + " (net)"} value={sales.subtotal} formatType="money" accent="violet" />
         </div>
       )}
 
