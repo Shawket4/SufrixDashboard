@@ -751,6 +751,7 @@
     "editTitle": "تعديل الباقة",
     "bundleName": "اسم الباقة",
     "namePh": "مثال: وجبة الإفطار، قهوة ودونات",
+    "descPh": "وصف اختياري لهذه الباقة",
     "price": "سعر الباقة",
     "priceHint": "سعر بيع الباقة بالجنيه المصري",
     "displayOrder": "ترتيب العرض",
@@ -770,7 +771,18 @@
     "branchesHint": "اتركها فارغة لتكون متاحة في جميع الفروع",
     "cost": "تكلفة المكونات",
     "computedCost": "التكلفة الإجمالية: {{amount}}",
+    "computedCostLabel": "التكلفة الإجمالية",
     "computedProfit": "الربح المقدر: {{amount}}",
+    "computedProfitLabel": "الربح المقدر",
+    "validation": {
+      "nameRequired": "اسم الباقة مطلوب",
+      "itemRequired": "يجب اختيار صنف من القائمة",
+      "quantityMin": "يجب أن تكون الكمية 1 على الأقل",
+      "componentsMin": "يجب أن تحتوي الباقة على صنفين على الأقل",
+      "componentsMax": "لا يمكن أن تحتوي الباقة على أكثر من 6 أصناف",
+      "duplicateItems": "لا يُسمح بتكرار الأصناف في مكونات الباقة",
+      "invalidPrice": "أدخل سعراً صالحاً"
+    },
     "image": "صورة الباقة",
     "imageHint": "PNG أو JPG أو WebP · بحد أقصى 5 ميجابايت",
     "imageAfterSave": "احفظ الباقة أولاً، ثم يمكنك إضافة صورة.",
@@ -804,6 +816,11 @@
     "customerSavings": "التوفير للعميل:",
     "activate": "تنشيط",
     "archive": "أرشفة"
+  },
+  "timePicker": {
+    "clearTime": "مسح الوقت",
+    "hour": "الساعة",
+    "minute": "الدقيقة"
   },
   "datePicker": {
     "today": "اليوم",

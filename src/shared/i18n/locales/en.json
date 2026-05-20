@@ -751,6 +751,7 @@
     "editTitle": "Edit Bundle",
     "bundleName": "Bundle Name",
     "namePh": "e.g. Breakfast Combo, Coffee & Donut",
+    "descPh": "Optional description for this bundle",
     "price": "Bundle Price",
     "priceHint": "Selling price of this bundle in EGP",
     "displayOrder": "Display Order",
@@ -770,7 +771,18 @@
     "branchesHint": "Leave empty to make it available in all branches",
     "cost": "Components Cost",
     "computedCost": "Total Cost: {{amount}}",
+    "computedCostLabel": "Total Cost",
     "computedProfit": "Est. Profit: {{amount}}",
+    "computedProfitLabel": "Est. Profit",
+    "validation": {
+      "nameRequired": "Bundle name is required",
+      "itemRequired": "Menu item is required",
+      "quantityMin": "Quantity must be at least 1",
+      "componentsMin": "A bundle must contain at least 2 items",
+      "componentsMax": "A bundle cannot contain more than 6 items",
+      "duplicateItems": "Duplicate menu items are not allowed in components",
+      "invalidPrice": "Enter a valid price"
+    },
     "image": "Bundle Image",
     "imageHint": "PNG, JPG or WebP · Max 5MB",
     "imageAfterSave": "Save the bundle first, then you can upload an image.",
@@ -804,6 +816,11 @@
     "customerSavings": "Customer Savings:",
     "activate": "Activate",
     "archive": "Archive"
+  },
+  "timePicker": {
+    "clearTime": "Clear time",
+    "hour": "Hour",
+    "minute": "Minute"
   },
   "datePicker": {
     "today": "Today",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,7 @@ import { DataTable } from "@/shared/ui/data-table";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
+import { TimeInput } from "@/shared/ui/time-input";
 import { Textarea } from "@/shared/ui/textarea";
 import { StatCard } from "@/shared/ui/stat-card";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -53,7 +54,7 @@ import {
   useActivateBundle,
   useArchiveBundle,
 } from "@/entities/bundle/queries";
-import { bundleSchema, type BundleFormValues } from "@/entities/bundle/schemas";
+import { createBundleSchema, type BundleFormValues } from "@/entities/bundle/schemas";
 import { bundleApi } from "@/entities/bundle/api";
 import { useMenuItems } from "@/entities/menu/queries";
 import { useBranches } from "@/entities/branch/queries";
@@ -74,13 +75,15 @@ interface BundleDialogProps {
 }
 
 function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
 
   const { data: menuItems = [] } = useMenuItems(orgId);
   const { data: branches = [] } = useBranches(orgId);
 
   const isEdit = !!editItem;
+
+  const bundleSchema = useMemo(() => createBundleSchema(t), [t, i18n.language]);
 
   // Initialize react-hook-form
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -235,7 +238,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                     <FormItem>
                       <FormLabel>{t("common.description")}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder={t("menu.addonDialog.descPh")} className="resize-none h-20" {...field} value={field.value ?? ""} />
+                        <Textarea placeholder={t("bundles.descPh")} className="resize-none h-20" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -313,7 +316,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                         <FormItem>
                           <FormLabel className="text-xs">{t("bundles.availableFromTime")}</FormLabel>
                           <FormControl>
-                          <Input type="time" {...field} value={field.value ?? ""} />
+                            <TimeInput value={field.value} onChange={field.onChange} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -325,7 +328,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                         <FormItem>
                           <FormLabel className="text-xs">{t("bundles.availableUntilTime")}</FormLabel>
                           <FormControl>
-                            <Input type="time" {...field} value={field.value ?? ""} />
+                            <TimeInput value={field.value} onChange={field.onChange} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -438,7 +441,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                   </div>
                   {isEdit && estimatedRecipeCostPiastres > 0 && (
                     <div className="flex justify-between border-b pb-2">
-                      <span className="text-muted-foreground">{t("bundles.computedCost").replace(": {{amount}}", "")}:</span>
+                      <span className="text-muted-foreground">{t("bundles.computedCostLabel")}:</span>
                       <span className="font-semibold tabular text-emerald-500">{fmtMoney(estimatedRecipeCostPiastres)}</span>
                     </div>
                   )}
@@ -450,7 +453,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                   )}
                   {isEdit && potentialProfit > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t("bundles.computedProfit").replace(": {{amount}}", "")}:</span>
+                      <span className="text-muted-foreground">{t("bundles.computedProfitLabel")}:</span>
                       <span className="font-bold tabular text-emerald-500">{fmtMoney(potentialProfit)}</span>
                     </div>
                   )}
