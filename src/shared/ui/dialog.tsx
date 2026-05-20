@@ -50,7 +50,7 @@ export const DialogContent = React.forwardRef<
       className={cn(
         "fixed z-50 bg-background shadow-2xl outline-none duration-300 ease-out will-change-[transform,opacity]",
         !sheet && [
-          "start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+          "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
           "w-[calc(100%-2rem)] rounded-xl border max-h-[90dvh] overflow-y-auto",
           SIZE[size],
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

@@ -74,9 +74,8 @@ interface BundleDialogProps {
 }
 
 function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleDialogProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const qc = useQueryClient();
-  const isAr = i18n.language === "ar";
 
   const { data: menuItems = [] } = useMenuItems(orgId);
   const { data: branches = [] } = useBranches(orgId);
@@ -276,8 +275,9 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                 {/* Timing constraints */}
                 <div className="rounded-xl border p-4 bg-muted/20 space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Calendar size={13} /> {t("orders.dateRange")} / {t("common.time")} (Optional)
+                    <Calendar size={13} /> {t("bundles.availability")} ({t("common.optional")})
                   </h4>
+                  <p className="text-[11px] text-muted-foreground">{t("bundles.availabilityHint")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
@@ -313,7 +313,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                         <FormItem>
                           <FormLabel className="text-xs">{t("bundles.availableFromTime")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("bundles.timePh")} {...field} value={field.value ?? ""} />
+                          <Input type="time" {...field} value={field.value ?? ""} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -325,7 +325,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                         <FormItem>
                           <FormLabel className="text-xs">{t("bundles.availableUntilTime")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("bundles.timePh")} {...field} value={field.value ?? ""} />
+                            <Input type="time" {...field} value={field.value ?? ""} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -444,7 +444,7 @@ function BundleDialog({ open, onClose, editItem, orgId, advisorValues }: BundleD
                   )}
                   {potentialDiscount > 0 && (
                     <div className="flex justify-between border-b pb-2">
-                      <span className="text-muted-foreground">{isAr ? "التوفير للعميل:" : "Customer Savings:"}</span>
+                      <span className="text-muted-foreground">{t("bundles.customerSavings")}</span>
                       <span className="font-bold tabular text-orange-500">-{fmtMoney(potentialDiscount)}</span>
                     </div>
                   )}
@@ -595,8 +595,7 @@ function PerformanceDialog({ open, onClose, bundle }: PerformanceDialogProps) {
 
 // ── Main Page Component ──────────────────────────────────────────────────────
 export default function Bundles() {
-  const { t, i18n } = useTranslation();
-  const isAr = i18n.language === "ar";
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { orgId } = useCurrentContext();
@@ -777,7 +776,7 @@ export default function Bundles() {
               <Button
                 variant="ghost"
                 size="iconSm"
-                title={isAr ? "تنشيط" : "Activate"}
+                title={t("bundles.activate")}
                 className="text-emerald-500 hover:bg-emerald-500/10"
                 onClick={() =>
                   activateMutation.mutate(
@@ -797,7 +796,7 @@ export default function Bundles() {
               <Button
                 variant="ghost"
                 size="iconSm"
-                title={isAr ? "أرشفة" : "Archive"}
+                title={t("bundles.archive")}
                 className="text-muted-foreground hover:bg-muted/10"
                 onClick={() =>
                   archiveMutation.mutate(
