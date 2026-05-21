@@ -20,6 +20,7 @@ const Discounts = lazy(() => import("@/pages/discounts/discounts"));
 const Permissions = lazy(() => import("@/pages/permissions/permissions"));
 const Settings = lazy(() => import("@/pages/settings/settings"));
 const PublicMenu = lazy(() => import("@/pages/public-menu/public-menu"));
+const MenuAdvisor = lazy(() => import("@/pages/menu-advisor/ui/menu-advisor-dashboard"));
 const NotFound = lazy(() => import("@/pages/error/not-found"));
 
 function PageLoader() {
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
           { path: "permissions", element: wrap(<Permissions />) },
           { path: "permissions/:userId", element: wrap(<Permissions />) },
           { path: "settings", element: wrap(<Settings />) },
+          { path: "menu-advisor", element: wrap(<MenuAdvisor />) },
           { path: "*", element: wrap(<NotFound />) },
         ],
       },

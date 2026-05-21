@@ -18,6 +18,7 @@ import {
   Settings,
   Shield,
   ShoppingBag,
+  Sparkles,
   Tag,
   Users,
   X,
@@ -78,6 +79,7 @@ const NAV: NavGroup[] = [
       { to: "/bundles", icon: Boxes, key: "nav.bundles", roles: ["super_admin", "org_admin", "branch_manager"], resource: "menu_items" },
       { to: "/recipes", icon: BookOpen, key: "nav.recipes", roles: ["super_admin", "org_admin", "branch_manager"], resource: "recipes" },
       { to: "/discounts", icon: Tag, key: "nav.discounts", roles: ["super_admin", "org_admin", "branch_manager"], resource: "discounts" },
+      { to: "/menu-advisor", icon: Sparkles, key: "nav.menuAdvisor", roles: ["super_admin", "org_admin", "branch_manager"], resource: "menu_items" },
     ],
   },
   {
