@@ -152,53 +152,139 @@ function OrderDetailDrawer({ open, onClose, orderId, onVoid }: { open: boolean; 
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("menu.items")}</p>
-                  {order.items.map((it) => (
-                    <div key={it.id} className="py-2 border-b last:border-0 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm">{it.item_name} {it.size_label && <span className="text-muted-foreground">({it.size_label})</span>}</p>
-                          <p className="text-xs text-muted-foreground">× {it.quantity} · {fmtMoney(it.unit_price)}</p>
-                          {it.addons.length > 0 && (
-                            <div className="mt-1 space-y-0.5">
-                              {it.addons.map((a) => (
-                                <p key={a.id} className="text-xs ps-2">+ {a.addon_name} {a.quantity > 1 && `×${a.quantity}`}{a.line_total > 0 && <span className="text-muted-foreground ms-1">({fmtMoney(a.line_total)})</span>}</p>
+                  {order.items.map((it) => {
+                    // Group deductions by bundle component
+                    const groupedDeductions: Record<string, typeof it.deductions_snapshot> = {};
+                    if (it.deductions_snapshot) {
+                      it.deductions_snapshot.forEach((d) => {
+                        let grpName = "";
+                        if (d.source && d.source.startsWith("bundle_component:")) {
+                          grpName = d.source.substring("bundle_component:".length);
+                        } else {
+                          grpName = it.item_name;
+                        }
+                        if (!groupedDeductions[grpName]) {
+                          groupedDeductions[grpName] = [];
+                        }
+                        groupedDeductions[grpName].push(d);
+                      });
+                    }
+
+                    return (
+                      <div key={it.id} className="py-2 border-b last:border-0 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm flex items-center flex-wrap gap-1">
+                              {it.item_name}
+                              {it.size_label && <span className="text-muted-foreground">({it.size_label})</span>}
+                              {it.bundle_id && (
+                                <Badge variant="default" className="px-1 py-0 text-[10px] uppercase font-bold tracking-wider leading-none">
+                                  Combo
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">× {it.quantity} · {fmtMoney(it.unit_price)}</p>
+                            {it.addons.length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {it.addons.map((a) => (
+                                  <p key={a.id} className="text-xs ps-2">+ {a.addon_name} {a.quantity > 1 && `×${a.quantity}`}{a.line_total > 0 && <span className="text-muted-foreground ms-1">({fmtMoney(a.line_total)})</span>}</p>
+                                ))}
+                              </div>
+                            )}
+                            {it.optionals && it.optionals.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {it.optionals.map((o, idx) => {
+                                  const optionName = o.field_name;
+                                  if (!optionName) return null;
+                                  const hasPrice = o.price > 0;
+                                  return (
+                                    <Badge
+                                      key={idx}
+                                      variant="warning"
+                                      className="px-1.5 py-0.5 text-[10px] font-semibold rounded"
+                                    >
+                                      {optionName}{hasPrice && ` +${fmtMoney(o.price)}`}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {it.bundle_components && it.bundle_components.length > 0 && (
+                              <div className="mt-2 ps-3 border-l-2 border-muted space-y-2">
+                                {it.bundle_components.map((c, cIdx) => (
+                                  <div key={cIdx} className="space-y-0.5">
+                                    <p className="text-xs font-semibold text-foreground">
+                                      – {c.item_name} {c.size_label && <span className="text-muted-foreground">({c.size_label})</span>}
+                                      <span className="text-muted-foreground ms-1">× {c.quantity * it.quantity}</span>
+                                    </p>
+                                    {c.addons && c.addons.length > 0 && (
+                                      <div className="space-y-0.5 ps-2">
+                                        {c.addons.map((a, aIdx) => (
+                                          <p key={aIdx} className="text-[11px] text-muted-foreground">
+                                            + {a.name} {a.quantity > 1 && `×${a.quantity}`}{a.price_modifier > 0 && <span className="ms-1">({fmtMoney(a.price_modifier * a.quantity)})</span>}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {c.optionals && c.optionals.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 ps-2 mt-0.5">
+                                        {c.optionals.map((o, oIdx) => (
+                                          <Badge
+                                            key={oIdx}
+                                            variant="warning"
+                                            className="px-1 py-0 text-[9px] font-semibold rounded"
+                                          >
+                                            {o.name}{o.price > 0 && ` +${fmtMoney(o.price)}`}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {it.notes && <p className="text-xs italic text-muted-foreground mt-1">{it.notes}</p>}
+                          </div>
+                          <span className="font-semibold tabular text-sm flex-shrink-0">{fmtMoney(it.line_total)}</span>
+                        </div>
+                        {it.deductions_snapshot && it.deductions_snapshot.length > 0 && (
+                          <details className="text-xs text-muted-foreground mt-2 border-t pt-1">
+                            <summary className="cursor-pointer font-medium hover:text-foreground transition-colors py-0.5">
+                              {t("orders.ingredientsUsed")} ({it.deductions_snapshot.length})
+                            </summary>
+                            <div className="ps-3 mt-2 space-y-3">
+                              {Object.entries(groupedDeductions).map(([compName, deductions]) => (
+                                <div key={compName} className="space-y-1">
+                                  <p className="font-semibold text-[11px] text-foreground flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    {compName}
+                                  </p>
+                                  <div className="ps-2.5 border-l-2 border-muted space-y-0.5">
+                                    {deductions.map((d, dIdx) => (
+                                      <p key={dIdx} className="tabular text-[11px]">
+                                        {d.ingredient_name}: {Number(d.quantity).toFixed(3)} {fmtUnit(d.unit)}
+                                        <span className="text-[10px] text-muted-foreground ms-1.5 opacity-80">
+                                          ({d.source === "drink_recipe" || d.source === "base"
+                                            ? "base"
+                                            : d.source.startsWith("bundle_component:")
+                                            ? "combo base"
+                                            : d.source.startsWith("optional:")
+                                            ? d.source.substring("optional:".length)
+                                            : d.source.startsWith("addon_swap:")
+                                            ? d.source.substring("addon_swap:".length)
+                                            : d.source})
+                                        </span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
                               ))}
                             </div>
-                          )}
-                          {it.optionals && it.optionals.length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {it.optionals.map((o, idx) => {
-                                const optionName = o.field_name;
-                                if (!optionName) return null;
-                                const hasPrice = o.price > 0;
-                                return (
-                                  <Badge
-                                    key={idx}
-                                    variant="warning"
-                                    className="px-1.5 py-0.5 text-[10px] font-semibold rounded"
-                                  >
-                                    {optionName}{hasPrice && ` +${fmtMoney(o.price)}`}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {it.notes && <p className="text-xs italic text-muted-foreground mt-1">{it.notes}</p>}
-                        </div>
-                        <span className="font-semibold tabular text-sm flex-shrink-0">{fmtMoney(it.line_total)}</span>
+                          </details>
+                        )}
                       </div>
-                      {it.deductions_snapshot && it.deductions_snapshot.length > 0 && (
-                        <details className="text-xs text-muted-foreground">
-                          <summary className="cursor-pointer">{t("orders.ingredientsUsed")} ({it.deductions_snapshot.length})</summary>
-                          <div className="ps-3 mt-1 space-y-0.5">
-                            {it.deductions_snapshot.map((d, idx) => (
-                              <p key={idx} className="tabular">{d.ingredient_name}: {Number(d.quantity).toFixed(3)} {fmtUnit(d.unit)}</p>
-                            ))}
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}

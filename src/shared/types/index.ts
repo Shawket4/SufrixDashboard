@@ -304,12 +304,36 @@ export interface InventoryDeduction {
   category: string;
 }
 
+export interface OrderBundleComponentAddon {
+  addon_item_id: string;
+  name: string;
+  price_modifier: number;
+  quantity: number;
+}
+
+export interface OrderBundleComponentOptional {
+  optional_field_id: string;
+  name: string;
+  price: number;
+}
+
+export interface OrderBundleComponentFull {
+  item_id: string;
+  item_name: string;
+  quantity: number;
+  size_label: string | null;
+  addons: OrderBundleComponentAddon[];
+  optionals: OrderBundleComponentOptional[];
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;
   menu_item_id: string;
   item_name: string;
   size_label: string | null;
+  bundle_id?: string | null;
+  bundle_components?: OrderBundleComponentFull[];
   unit_price: number;
   quantity: number;
   line_total: number;
@@ -325,6 +349,8 @@ export interface OrderItemFull {
   menu_item_id: string;
   item_name: string;
   size_label: string | null;
+  bundle_id?: string | null;
+  bundle_components?: OrderBundleComponentFull[];
   unit_price: number;
   quantity: number;
   line_total: number;
