@@ -78,9 +78,12 @@ export const usePermissions = () => {
         // Super admin can do everything
         if (user.role === "super_admin") return true;
 
-        // If we have API-loaded effective permissions, use them as ground truth
+        // If we have API-loaded effective permissions, use them as ground truth if defined
         if (data?.permissions) {
-          return Boolean(map[resource]?.[action]);
+          const apiGranted = map[resource]?.[action];
+          if (apiGranted !== undefined) {
+            return apiGranted;
+          }
         }
 
         // Fallback to role-defaults
