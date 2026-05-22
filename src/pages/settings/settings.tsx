@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
-import { Languages, Moon, Sun, Monitor, Coffee } from "lucide-react";
+import { Languages, Moon, Sun, Monitor } from "lucide-react";
 import { PageShell } from "@/shared/ui/page-shell";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
