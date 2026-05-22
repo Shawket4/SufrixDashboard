@@ -245,7 +245,7 @@
     "assignBranches": "Assign branches",
     "totalUsers": "Total Users",
     "orgAdmins": "Org Admins",
-    "branchManagers": "Branch Managers",
+    "branchManagers": "Tellers",
     "tellers": "Tellers",
     "createdToast": "User created",
     "updatedToast": "User updated",
@@ -868,7 +868,28 @@
     "estUplift": "Est. Uplift",
     "netCmImpact": "Net CM Impact if removed",
     "perMonth": "/ month",
-    "size": "Size: {{size}}"
+    "size": "Size: {{size}}",
+    "quadrant": {
+      "star": "Star",
+      "plowhorse": "Plowhorse",
+      "puzzle": "Puzzle",
+      "dog": "Dog"
+    },
+    "revenueClass": {
+      "hero": "Hero",
+      "steady": "Steady",
+      "slow": "Slow",
+      "quiet": "Quiet"
+    },
+    "removalRec": {
+      "remove": "Remove",
+      "keep_and_bundle": "Keep and Bundle",
+      "keep_and_reformulate": "Keep and Reformulate",
+      "no_strong_signal": "No Strong Signal"
+    },
+    "bundleOpportunity": "Bundle Opportunity",
+    "bundleTitleCount": "Bundle of {{count}}",
+    "costMissing": "Cost Missing"
   },
   "timePicker": {
     "clearTime": "Clear time",

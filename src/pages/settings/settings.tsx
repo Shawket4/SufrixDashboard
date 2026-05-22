@@ -23,11 +23,15 @@ export default function Settings() {
           <Card>
             <CardContent className="p-5 flex items-center gap-4">
               <Avatar className="h-12 w-12">
-                <AvatarFallback className="text-base">{initials(user.name)}</AvatarFallback>
+                <AvatarFallback className="text-base">
+                  {initials(user.name)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-bold">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.email}
+                </p>
               </div>
               {role && <Badge variant="info">{t(`roles.${role}`)}</Badge>}
             </CardContent>
@@ -41,9 +45,24 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Theme</p>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <Button variant={theme === "light" ? "default" : "outline"} onClick={() => setTheme("light")}><Sun /> {t("theme.light")}</Button>
-              <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")}><Moon /> {t("theme.dark")}</Button>
-              <Button variant={theme === "system" ? "default" : "outline"} onClick={() => setTheme("system")}><Monitor /> {t("theme.system")}</Button>
+              <Button
+                variant={theme === "light" ? "default" : "outline"}
+                onClick={() => setTheme("light")}
+              >
+                <Sun /> {t("theme.light")}
+              </Button>
+              <Button
+                variant={theme === "dark" ? "default" : "outline"}
+                onClick={() => setTheme("dark")}
+              >
+                <Moon /> {t("theme.dark")}
+              </Button>
+              <Button
+                variant={theme === "system" ? "default" : "outline"}
+                onClick={() => setTheme("system")}
+              >
+                <Monitor /> {t("theme.system")}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -52,13 +71,22 @@ export default function Settings() {
           <CardContent className="p-5 space-y-3">
             <div>
               <p className="text-sm font-bold">{t("nav.language")}</p>
-              <p className="text-xs text-muted-foreground">Current: {i18n.resolvedLanguage === "ar" ? "العربية" : "English"}</p>
+              <p className="text-xs text-muted-foreground">
+                Current:{" "}
+                {i18n.resolvedLanguage === "ar" ? "العربية" : "English"}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant={i18n.resolvedLanguage === "en" ? "default" : "outline"} onClick={() => setLang("en")}>
+              <Button
+                variant={i18n.resolvedLanguage === "en" ? "default" : "outline"}
+                onClick={() => setLang("en")}
+              >
                 <Languages /> English
               </Button>
-              <Button variant={i18n.resolvedLanguage === "ar" ? "default" : "outline"} onClick={() => setLang("ar")}>
+              <Button
+                variant={i18n.resolvedLanguage === "ar" ? "default" : "outline"}
+                onClick={() => setLang("ar")}
+              >
                 <Languages /> العربية
               </Button>
             </div>
@@ -68,7 +96,7 @@ export default function Settings() {
         <Card>
           <CardContent className="p-5 flex items-center gap-3">
             <div className="w-10 h-10 brand-gradient rounded-lg flex items-center justify-center">
-              <Coffee size={18} className="text-white" />
+              <img src="Icon.svg" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold">{t("app.name")}</p>

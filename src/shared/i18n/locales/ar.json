@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "سوفريكس",
+    "name": "سفريكس",
     "tagline": "إدارة المقاهي"
   },
   "common": {
-    "copyright": "© {{year}} سوفريكس. جميع الحقوق محفوظة.",
+    "copyright": "© {{year}} سفريكس. جميع الحقوق محفوظة.",
     "source": "المصدر",
     "save": "حفظ",
     "saveChanges": "حفظ التغييرات",
@@ -813,7 +813,11 @@
     "empty": "لا توجد باقات بعد",
     "emptyHint": "قم بإنشاء باقات مجمعة بأسعار مخصصة لزيادة متوسط قيمة الطلب.",
     "availability": "التوافر",
-    "availabilityHint": "نافذة الوقت تتكرر يومياً.",
+    "availabilityHint": "نافذة الوقت تتكرر يومياً. إذا تم تحديد تواريخ أيضاً، فسيتم تطبيقها فقط خلال هذا النطاق الزمني.",
+    "availableFromTime": "يفتح في",
+    "availableUntilTime": "يغلق في",
+    "availableFromDate": "تاريخ البدء",
+    "availableUntilDate": "تاريخ الانتهاء",
     "avail": {
       "hint": "اختر متى تكون هذه الباقة متاحة للعملاء:",
       "permanent": "دائم في القائمة",
@@ -864,7 +868,28 @@
     "estUplift": "الزيادة المقدرة",
     "netCmImpact": "تأثير هامش الربح عند الإزالة",
     "perMonth": "/ شهر",
-    "size": "الحجم: {{size}}"
+    "size": "الحجم: {{size}}",
+    "quadrant": {
+      "star": "نجم",
+      "plowhorse": "حصان حرث",
+      "puzzle": "لغز",
+      "dog": "ضعيف"
+    },
+    "revenueClass": {
+      "hero": "بطل",
+      "steady": "مستقر",
+      "slow": "بطيء",
+      "quiet": "هادئ"
+    },
+    "removalRec": {
+      "remove": "إزالة",
+      "keep_and_bundle": "احتفاظ وضم لباقة",
+      "keep_and_reformulate": "احتفاظ وتعديل المكونات",
+      "no_strong_signal": "لا يوجد مؤشر قوي"
+    },
+    "bundleOpportunity": "فرصة باقة",
+    "bundleTitleCount": "باقة من {{count}}",
+    "costMissing": "التكلفة مفقودة"
   },
   "timePicker": {
     "clearTime": "مسح الوقت",
