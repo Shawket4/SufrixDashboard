@@ -4,21 +4,17 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-reac
 import { cn } from "@/shared/lib/cn";
 import { Button } from "./button";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { cairoDateISO, cairoParts, fmtDate } from "@/shared/lib/format";
+import { cairoDateISO, cairoParts, fmtDate, cairoNow } from "@/shared/lib/format";
+import { TZDate } from "@date-fns/tz";
+import { subDays } from "date-fns";
 
 type DayParts = { y: number; m: number; d: number };
 
 const toNum = (p?: DayParts) => (p ? p.y * 10000 + p.m * 100 + p.d : null);
 
 const getCairoToday = (): DayParts => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const g = (t: string) => parseInt(parts.find((p) => p.type === t)!.value, 10);
-  return { y: g("year"), m: g("month") - 1, d: g("day") };
+  const d = cairoNow();
+  return { y: d.getFullYear(), m: d.getMonth(), d: d.getDate() };
 };
 
 interface Props {
@@ -52,34 +48,21 @@ export function DateRangePicker({ from, to, onChange }: Props) {
   const [year, setYear] = React.useState(today.y);
 
   const applyPreset = (days: number) => {
-    const tdy = getCairoToday();
-    const startMs = Date.UTC(tdy.y, tdy.m, tdy.d) - days * 86_400_000;
-    const d = new Date(startMs);
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Africa/Cairo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(d);
-    const g = (t: string) => parseInt(parts.find((p) => p.type === t)!.value, 10);
-    onChange(cairoDateISO(g("year"), g("month") - 1, g("day")), cairoDateISO(tdy.y, tdy.m, tdy.d, true));
+    const tdy = cairoNow();
+    const past = subDays(tdy, days);
+    onChange(
+      cairoDateISO(past.getFullYear(), past.getMonth(), past.getDate()),
+      cairoDateISO(tdy.getFullYear(), tdy.getMonth(), tdy.getDate(), true)
+    );
   };
 
   const isPresetActive = (days: number): boolean => {
     if (!from || !to) return false;
-    const tdy = getCairoToday();
-    const startMs = Date.UTC(tdy.y, tdy.m, tdy.d) - days * 86_400_000;
-    const d = new Date(startMs);
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Africa/Cairo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(d);
-    const g = (t: string) => parseInt(parts.find((p) => p.type === t)!.value, 10);
+    const tdy = cairoNow();
+    const past = subDays(tdy, days);
     return (
-      from === cairoDateISO(g("year"), g("month") - 1, g("day")) &&
-      to === cairoDateISO(tdy.y, tdy.m, tdy.d, true)
+      from === cairoDateISO(past.getFullYear(), past.getMonth(), past.getDate()) &&
+      to === cairoDateISO(tdy.getFullYear(), tdy.getMonth(), tdy.getDate(), true)
     );
   };
 
@@ -106,8 +89,8 @@ export function DateRangePicker({ from, to, onChange }: Props) {
   const isAllTime = !from && !to;
   const isCustom = Boolean(from) && !PRESETS.some((p) => isPresetActive(p.days)) && !isAllTime;
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new TZDate(year, month + 1, 0, "Africa/Cairo").getDate();
+  const firstDay = new TZDate(year, month, 1, "Africa/Cairo").getDay();
   const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   const fromNum = toNum(selected.from);
@@ -120,12 +103,12 @@ export function DateRangePicker({ from, to, onChange }: Props) {
     month === 11 ? (setMonth(0), setYear((y) => y + 1)) : setMonth((m) => m + 1);
 
   const monthName = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "Africa/Cairo" }).format(
-    new Date(year, month, 1),
+    new TZDate(year, month, 1, "Africa/Cairo"),
   );
 
   const weekdayNames = React.useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
-    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 7 + i))); // Sun..Sat
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "Africa/Cairo" });
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new TZDate(2024, 0, 7 + i, "Africa/Cairo"))); // Sun..Sat
   }, [locale]);
 
   return (

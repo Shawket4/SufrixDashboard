@@ -16,6 +16,7 @@
 
 import { toast } from "sonner";
 import i18n from "@/shared/i18n";
+import { TZDate } from "@date-fns/tz";
 
 // ── Column types ──────────────────────────────────────────────────────────────
 
@@ -125,7 +126,9 @@ const coerceValue = (raw: unknown, type: ColumnType | undefined): unknown => {
       return typeof raw === "number" ? raw : Number(raw) || 0;
     case "date":
     case "dateTime":
-      return raw instanceof Date ? raw : new Date(String(raw));
+      return raw instanceof Date
+        ? new TZDate(raw, "Africa/Cairo")
+        : new TZDate(String(raw), "Africa/Cairo");
     case "bool":
       return raw ? "✓" : "—";
     default:

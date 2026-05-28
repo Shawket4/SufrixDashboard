@@ -1,5 +1,6 @@
 import { APP_TZ, DEFAULT_CURRENCY, DEFAULT_LOCALE_AR, DEFAULT_LOCALE_EN } from "@/shared/config/constants";
 import i18n from "@/shared/i18n";
+import { TZDate } from "@date-fns/tz";
 
 type Lang = "en" | "ar";
 
@@ -105,27 +106,27 @@ export const fmtDuration = (start: string | null | undefined, end?: string | nul
 };
 
 /** Return Cairo "today" and "now" helpers — useful for date range logic */
-export const cairoNow = (): Date => new Date();
+export const cairoNow = (): TZDate => new TZDate(Date.now(), APP_TZ);
 
 /** ISO for Cairo calendar day (start or end) in UTC */
 export const cairoDateISO = (year: number, month: number, day: number, endOfDay = false): string => {
-  // Cairo is UTC+2 (no DST since 2014)
-  const CAIRO_OFFSET_MIN = 2 * 60;
-  const timePart = endOfDay ? (23 * 60 + 59) * 60 * 1000 + 59_999 : 0;
-  const utcMs = Date.UTC(year, month, day) - CAIRO_OFFSET_MIN * 60_000 + timePart;
-  return new Date(utcMs).toISOString();
+  const d = new TZDate(
+    year,
+    month,
+    day,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+    APP_TZ
+  );
+  return d.toISOString();
 };
 
 /** Extract Cairo calendar parts {y,m,d} from an ISO string */
 export const cairoParts = (iso: string): { y: number; m: number; d: number } => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: APP_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(iso));
-  const get = (t: string) => parseInt(parts.find((p) => p.type === t)!.value, 10);
-  return { y: get("year"), m: get("month") - 1, d: get("day") };
+  const d = new TZDate(iso, APP_TZ);
+  return { y: d.getFullYear(), m: d.getMonth(), d: d.getDate() };
 };
 
 /** Format a period timestamp for charts based on granularity */
